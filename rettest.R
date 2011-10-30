@@ -3,7 +3,7 @@ library('RCurl')
 #q
 url<-paste('ftp://taxsim:02138@taxsimftp.nber.org/tmp/',format(Sys.time(),"%Y%m%d%H%M%S"),sep='')
 outputurl<-paste(url,'taxsim',sep='.')
-#msg<-paste(url,'msg',sep='')
+msgurl<-paste(url,'msg',sep='.')
 
 T1 <- 60
 headline<-"9 11 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
@@ -76,6 +76,7 @@ names<-c('Case ID','Year','State','Federal income tax liability','State income t
 #a<-getURL(outputurl)
 
 taxsim <- read.table(textConnection(getURL(outputurl)))
+#print(getURL(msgurl))
 names(taxsim)<-names
 print(taxsim)
 #This works to take the output file from taxsim.

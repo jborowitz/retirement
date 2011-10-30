@@ -54,6 +54,17 @@ time <- seq(min(a$Year), now+T2-1)
 #scale <- p/p[1]
 
 avgwage <- 40711.61 
+kmax <- 16500
+imax <- 5000
+kseries <- 500*round(kmax/500*(1+inflation)^t)
+#401k contribution limits: http://en.wikipedia.org/wiki/401(k)#Contribution_limits
+iseries <- 500*round(imax/500*(1+inflation)^t)
+#IRA contribution limits: http://www.guidestoneretirement.org/retirementplans/contributionlimits/futurecontriblimits.aspx
+#modelling note: since my default assumption is that tax rates and brackets
+#will move with inflation, I think my plan will be to just leave these
+#contribution limits equal at a given time, and then implicitly adjust for
+#inflation by reinflating a 2008 tax situation to future dollars.
+
 #http://www.ssa.gov/oact/COLA/piaformula.html
 initwage <- 9779.44
 bp1 <- round(180 * avgwage/initwage)
@@ -64,6 +75,28 @@ pension <- function(retirementDate,sR,ssType){
     #terms, if a person saves at a given rate and gets ss under a given
     #rule, and retires at a certain time.  I will likely in the future make
     #this take income as an input too.
+
+    #Other things that we want to calculate:
+    #401k
+    #IRA
+    #other savings
+    #taxable capital gains
+    #marginal tax rates
+    #To do this, I think i want to make a single call to  taxsim and then
+    #interpolate answers.  This isn't going to be quite the best
+    #optimization, but should be alright mostly.  I need to vary the
+    #following variables to determine taxes for a given individual under a
+    #range of possible decisions:
+        #income - from min to max
+        #capital gains amounts - (here using just the avg return might be
+                                 #weird)
+        #Kids/marriage/other deducatinos
+        # age
+        #social security income
+        #kid/dependents
+        
+
+
     today <- Sys.Date()
     j <- retirementDate - today
     T1 <- floor(as.double(retirementDate - today)/365.25)
