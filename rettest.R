@@ -1,4 +1,5 @@
 library('RCurl')
+library('combinat')
 #q<-Sys.time()
 #q
 url<-paste('ftp://taxsim:02138@taxsimftp.nber.org/tmp/',format(Sys.time(),"%Y%m%d%H%M%S"),sep='')
@@ -10,33 +11,60 @@ headline<-"9 11 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
 text<-"9 70 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
 1 1989 13 3 1 0 30000 0 0 0 0 0 0 0 0 0 2000 0 1 0 -1000 0
 1 1989 13 3 1 0 20000 0 0 0 0 0 0 0 0 0 2000 0 1 0 -1000 0"
-
-caseid <- seq(1,T1)
-year <- rep(2007,T1)
-state <- rep(9,T1)
-married <- rep(1,T1)
-dependents <- rep(0,T1)
-over65 <- rep(0,T1)
-over65[seq(T1-26,T1)] <- 1
-income <- rep(100000,T1)
-spouseincome <- rep(0,T1)
-dividendincome <- rep(0,T1)
-propertyincome <- rep(0,T1) 
-#Propertyincome contains IRA contributions
-taxablepensions <- rep(0,T1)
-socialsecurityincome <- rep(0,T1)
-transferincome <- rep(0,T1)
-rentpaid <- rep(0,T1)
-realestatepaid <- rep(0,T1)
-itemizeddeductions <- rep(0,T1)
-childcareexpense <- rep(0,T1)
-uiincome <- rep(0,T1)
-minordependents <- rep(0,T1)
-nonAMTdeductions <- rep(0,T1)
-shorttermcapgains <- rep(0,T1)
-longtermcapgains <- rep(0,T1)
+income <- seq(0,500000,by=100000)
+over65 <- seq(0,1)
+longtermcapitalgains <- seq(0,5000000,by=1000000)
+dividendincome <- seq(0,5000000,by=1000000)
+dependents <- seq(0,1)
+married <- seq(0,1)
+socialsecurityincome <- rep(0,50000,by=10000)
+#big<-expand.grid(income, over65,longtermcapitalgains,dividendincome,dependents,married,socialsecurityincome)
+big<-expand.grid(income, over65,longtermcapitalgains,dividendincome,dependents)
+married <- 1
+socialsecurityincome <- 0
+state <- 9
+year <- 1997
+spouseincome <- 0
+propertyincome <- 0
+taxablepensions <- 0
+transferincome <- 0 
+rentpaid <- 0
+realestatepaid <- 0
+itemizeddeductions <- 0
+childcareexpense <- 0
+uiincome <- 0
+nonAMTdeductions <- 0
+shorttermcapgains <- 0
 tsfile <-
-    cbind(caseid,year,state,married,dependents,over65,income,spouseincome,dividendincome,propertyincome,taxablepensions,socialsecurityincome,transferincome,rentpaid,realestatepaid,itemizeddeductions,childcareexpense,uiincome,minordependents,nonAMTdeductions,shorttermcapgains,longtermcapgains)
+    cbind(seq(1,dim(big)[1]),year,state,married,dependents,big$Var2,big$Var1,spouseincome,big$Var4,propertyincome,taxablepensions,socialsecurityincome,transferincome,rentpaid,realestatepaid,itemizeddeductions,childcareexpense,uiincome,big$Var5,nonAMTdeductions,shorttermcapgains,big$Var3)
+
+#caseid <- seq(1,T1)
+#year <- rep(2007,T1)
+#state <- rep(9,T1)
+#married <- rep(1,T1)
+#dependents <- rep(0,T1)
+#over65 <- rep(0,T1)
+#over65[seq(T1-26,T1)] <- 1
+#income <- rep(100000,T1)
+#spouseincome <- rep(0,T1)
+#dividendincome <- rep(0,T1)
+#propertyincome <- rep(0,T1) 
+##Propertyincome contains IRA contributions
+#taxablepensions <- rep(0,T1)
+#socialsecurityincome <- rep(0,T1)
+#transferincome <- rep(0,T1)
+#rentpaid <- rep(0,T1)
+#realestatepaid <- rep(0,T1)
+#itemizeddeductions <- rep(0,T1)
+#childcareexpense <- rep(0,T1)
+#uiincome <- rep(0,T1)
+#minordependents <- rep(0,T1)
+#nonAMTdeductions <- rep(0,T1)
+#shorttermcapgains <- rep(0,T1)
+#longtermcapgains <- rep(0,T1)
+#tsfile <-
+    #cbind(caseid,year,state,married,dependents,over65,income,spouseincome,dividendincome,propertyincome,taxablepensions,socialsecurityincome,transferincome,rentpaid,realestatepaid,itemizeddeductions,childcareexpense,uiincome,minordependents,nonAMTdeductions,shorttermcapgains,longtermcapgains)
+
 temp<- file('test.txt')
 write(headline,temp,append=FALSE) 
 system('cat test.txt')
@@ -80,6 +108,9 @@ taxsim <- read.table(textConnection(getURL(outputurl)))
 names(taxsim)<-names
 print(taxsim)
 #This works to take the output file from taxsim.
+save(taxsim,file="taxsim.RData")
+# Save the output as a file.  It can be read back in with
+# 'load('taxsim.RData')'
 
 #a
 #a<-getURL(msg)
