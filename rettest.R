@@ -1,5 +1,4 @@
 library('RCurl')
-library('combinat')
 #q<-Sys.time()
 #q
 url<-paste('ftp://taxsim:02138@taxsimftp.nber.org/tmp/',format(Sys.time(),"%Y%m%d%H%M%S"),sep='')
@@ -108,7 +107,7 @@ taxsim <- read.table(textConnection(getURL(outputurl)))
 names(taxsim)<-names
 print(taxsim)
 #This works to take the output file from taxsim.
-save(taxsim,file="taxsim.RData")
+save(tsfile,taxsim,file="taxsim.RData")
 # Save the output as a file.  It can be read back in with
 # 'load('taxsim.RData')'
 
