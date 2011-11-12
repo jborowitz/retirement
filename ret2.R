@@ -70,6 +70,47 @@ initwage <- 9779.44
 bp1 <- round(180 * avgwage/initwage)
 bp2 <- round(1085 *avgwage/initwage)
 estate <- 500000
+fedtax <-
+    function(X){
+    #function(income,over65,longtermcapitalgains,dividendincome,dependents){
+        #big<-expand.grid(income, over65,longtermcapitalgains,dividendincome,dependents)
+        income <- X$income
+        over65 <- X$over65
+        longtermcapitalgains <- X$longtermcapitalgains
+        dividendincome <- X$dividendincome
+        dependents <- X$dependents
+
+        married <- 1
+        socialsecurityincome <- 0
+        state <- 9
+        year <- 1997
+        spouseincome <- 0
+        propertyincome <- 0
+        taxablepensions <- 0
+        transferincome <- 0 
+        rentpaid <- 0
+        realestatepaid <- 0
+        itemizeddeductions <- 0
+        childcareexpense <- 0
+        uiincome <- 0
+        nonAMTdeductions <- 0
+        shorttermcapgains <- 0
+        caseid <- 1
+#tsfile <-
+    #cbind(seq(1,dim(big)[1]),year,state,married,dependents,big$Var2,big$Var1,spouseincome,big$Var4,propertyincome,taxablepensions,socialsecurityincome,transferincome,rentpaid,realestatepaid,itemizeddeductions,childcareexpense,uiincome,big$Var5,nonAMTdeductions,shorttermcapgains,big$Var3)
+        tsfile <-
+            cbind(seq(1,dim(big)[1]),year,state,married,dependents,over65,income,spouseincome,dividendincome,propertyincome,taxablepensions,socialsecurityincome,transferincome,rentpaid,realestatepaid,itemizeddeductions,childcareexpense,uiincome,dependents,nonAMTdeductions,shorttermcapgains,longtermcapitalgains)
+        temp<- file('test.txt')
+        temptable<- file('testtable.txt')
+        write(headline,temp,append=FALSE) 
+        write.table(tsfile, temptable, row.names=FALSE, col.names=FALSE, append=TRUE)
+        system('cat testtable.txt >> test.txt')
+        ftpUpload('test.txt',url)
+        taxsim <- read.table(textConnection(getURL(outputurl)))
+        X$taxsim <- taxsim[4]
+        #return(taxsim[4])
+        return(X)
+    }
 pension <- function(retirementDate,sR,ssType){
     #This function calculates the final yearly permanent income, in real
     #terms, if a person saves at a given rate and gets ss under a given
