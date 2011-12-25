@@ -48,7 +48,9 @@ inv <- function(value,vec){
         #return(list(key=high,value=highv))
     }
 }
-indexvalue <- function(aval,bval,dval){
+taxes <-
+    function(income,over65,longtermcapitalgains,dividendincome,dependents
+indexvalue <- function(aval,bval,dval,agrid, bgrid, dgrid, func ){
     #this function takes 3 function values and returns the indexes that
     #would need to be used to look up the three dimensional function value.
     #So there's a function f(aval,bval,cval) that is represented by some
@@ -58,13 +60,6 @@ indexvalue <- function(aval,bval,dval){
     # I would like to extend the function to take 3 equal length vectors
     # and one array representign f(a,b,c) and return a vector that is the
     # value of f for these vectors.
-    print(length(e))
-    print(e)
-a<-seq(1000,10000,by=1000)
-b<-seq(3,60,by=3)
-d<-seq(12,120,by=12)
-e <- expand.grid(a,b,d)
-out<- e$Var1 * e$Var2 * e$Var3
     #apply(input,2,vapply,inv,FUN.VALUE=0,
     acall <- vapply(X=aval,FUN=inv,FUN.VALUE=0,a)
     bcall <- vapply(X=bval,FUN=inv,FUN.VALUE=0,b)
@@ -75,22 +70,28 @@ out<- e$Var1 * e$Var2 * e$Var3
     #acall <- inv(a,aval)
     #bcall <- inv(b,bval)
     #dcall <- inv(d,dval)
-    print(c(length(a),length(b),length(d)))
-    output <- array(out,dim=c(length(a),length(b),length(d)))
-    print(c(a,b,d))
+    print(c(length(agrid),length(bgrid),length(dgrid)))
+    output <- array(func,dim=c(length(agrid),length(bgrid),length(dgrid)))
+    print(c(agrid,bgrid,dgrid))
     #print(output)
     #The key insight here is expand.grid(a1,a2,a3) to
     #array(.,dim=c(a1,a2,a3)) is what orders things into a 3d array
     #return(list(output=output,val=output[acall$key,bcall$key,dcall$key]))
     #Used to have key and value returned from inv, and this worked
-    return(list(output=output,val=output[cbind(acall,bcall,dcall)]))
+    #return(list(output=output,val=output[cbind(acall,bcall,dcall)]))
+    return(output[cbind(acall,bcall,dcall)])
 }
 
+agrid<-seq(1000,10000,by=1000)
+bgrid<-seq(3,60,by=3)
+dgrid<-seq(12,120,by=12)
+e <- expand.grid(agrid,bgrid,dgrid)
+func<- e$Var1 * e$Var2 * e$Var3
 N <- 30
 v <- c(6500,31,55)
 q <- t(matrix(v,dim=(N,length(v))))
-mystuff<-indexvalue(array(seq(500,29*500+500,by=500)),array(rep(31,30)),array(rep(55,30)))
-print(mystuff$val)
+mystuff<-indexvalue(array(seq(500,29*500+500,by=500)),array(rep(31,30)),array(rep(55,30)),agrid=agrid, bgrid=bgrid,dgrid=dgrid,func=func)
+print(mystuff)
 print(c(a$val,6500*31*55))
 # Thoughts on what's going on: I ultimately have some different ranges of x
 # values, and I will computer the tax rate for each of these x values.  One
