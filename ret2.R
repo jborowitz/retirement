@@ -72,8 +72,6 @@ bp2 <- round(1085 *avgwage/initwage)
 estate <- 500000
 fedtax <-
     function(X){
-    #function(income,over65,longtermcapitalgains,dividendincome,dependents){
-        #big<-expand.grid(income, over65,longtermcapitalgains,dividendincome,dependents)
         income <- X$income
         over65 <- X$over65
         longtermcapitalgains <- X$longtermcapitalgains
@@ -107,7 +105,8 @@ fedtax <-
         system('cat testtable.txt >> test.txt')
         ftpUpload('test.txt',url)
         taxsim <- read.table(textConnection(getURL(outputurl)))
-        X$taxsim <- taxsim[4]
+        X$fed <- taxsim[4]
+        X$state <- taxsim[5]
         #return(taxsim[4])
         return(X)
     }
@@ -137,6 +136,8 @@ pension <- function(retirementDate,sR,ssType){
         #kid/dependents
         
 
+    # TODO: make a call to fedtax to get tax rates
+    # TODO: Integrate taxes into formula
 
     today <- Sys.Date()
     j <- retirementDate - today
@@ -153,6 +154,16 @@ pension <- function(retirementDate,sR,ssType){
         #This functino calculates how much money you would be left with if
         #you had given income levels and then spent at retirementIncomeGoal
         #real levels durign retirement
+        t<-seq(0,T2)
+        finances <- data.frame(t)
+        finances$income <- income
+        finances$currentSavings <- income * savingsRate
+        finances$toIRA <- pmin(finances$currentSavings,IRAlimit)
+        finances$taxableincome <- finances$income - finances$toIRA
+        #TODO: set IRAlimit
+        finances$taxes <- #Comes from taxsim
+        finances$netincome <- #Comes from taxsim too
+
         X <- diag(T2) - rbind(rep(0,T2),cbind(diag(returnHistory[2:T2]+1),rep(0,T2-1)))
         q <- savingsRate*income -  retirementConsumptionPath * retirementIncomeGoal
         q[1] <- q[1]+w0
