@@ -10,13 +10,11 @@ headline<-"9 11 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
 text<-"9 70 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
 1 1989 13 3 1 0 30000 0 0 0 0 0 0 0 0 0 2000 0 1 0 -1000 0
 1 1989 13 3 1 0 20000 0 0 0 0 0 0 0 0 0 2000 0 1 0 -1000 0"
-income <- seq(0,500000,by=100000)
-over65 <- seq(0,1)
+income <- seq(0,500000,by=25000)
+over65 <- 0
 longtermcapitalgains <- seq(0,5000000,by=1000000)
 dividendincome <- seq(0,5000000,by=1000000)
-dependents <- seq(0,1)
-married <- seq(0,1)
-socialsecurityincome <- rep(0,50000,by=10000)
+dependents <- 0
 #big<-expand.grid(income, over65,longtermcapitalgains,dividendincome,dependents,married,socialsecurityincome)
 big<-expand.grid(income, over65,longtermcapitalgains,dividendincome,dependents)
 married <- 1
@@ -34,6 +32,9 @@ childcareexpense <- 0
 uiincome <- 0
 nonAMTdeductions <- 0
 shorttermcapgains <- 0
+incomegrid <- income
+longtermcapitalgainsgrid <- longtermcapitalgains
+dividendincomegrid <- dividendincome
 tsfile <-
     cbind(seq(1,dim(big)[1]),year,state,married,dependents,big$Var2,big$Var1,spouseincome,big$Var4,propertyincome,taxablepensions,socialsecurityincome,transferincome,rentpaid,realestatepaid,itemizeddeductions,childcareexpense,uiincome,big$Var5,nonAMTdeductions,shorttermcapgains,big$Var3)
 
@@ -261,3 +262,38 @@ save(tsfile,taxsim,file="taxsim.RData")
 #20. Deductions not included in item 16 and not a preference for the AMT, including (on Schedule A for 2009) Deductible medical expenses in excess of 10% of AGI (only 1990+) Motor Vehicle Taxes paid (line 7 of schedule A) Home mortgage interest (line 15) Charitable contributions (line 19) Casulty or Theft Losses (line 20) 
 #21. Short Term Capital Gains or losses.  (+/-) 
 #22. Long Term Capital Gains or losses.  (+/-)
+source('temp.R')
+
+taxes <-
+    function(income=100000, over65=0, longtermcapitalgains=0,
+             dividendincome=0, dependents=0, married=0,
+             socialsecurityincome=0, state=9, year=2011, spouseincome=0,
+             propertyincome=0, taxablepensions=0, transferincome=0,
+             rentpaid=0, realestatepaid=0, itemizeddeductions=0,
+             childcareexpense=0, uiincome=0, nonAMTdeductions=0,
+             shorttermcapgains=0, ftp=FALSE){
+        # Currently I actually couldn't use all these arguments.  I could
+        # pass them to get a taxsim file, but I'm not confident that I
+        # could then lookup results based on the other values.
+        if (ftp) {
+            print("Should get new taxsim data")
+        }
+        else{
+            load('taxsim.RData')
+            big <- expand.grid(income,longtermcapitalgains,dividendincome)
+            a <- big[,1]
+            b <- big[,2]
+            d <- big[,3]
+            tax <- indexvalue(aval=a, bval=b, dval=d, agrid=incomegrid,
+                              bgrid=longtermcapitalgainsgrid,
+                              dgrid=dividendincomegrid,
+                              func=as.matrix(taxsim[4],1))
+            #this calculates the federal tax from taxsim.  The key thing is
+            #that the taxsim results have to be in matrix form.  Without
+            #that, indexing doesn't work right.
+            return(tax)
+        }
+}
+t<-as.matrix(taxsim)
+ball<-taxes(income=array(seq(10000,100000,length.out=5)))
+ball<-taxes()
