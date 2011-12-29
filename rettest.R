@@ -271,23 +271,28 @@ taxes <-
              propertyincome=0, taxablepensions=0, transferincome=0,
              rentpaid=0, realestatepaid=0, itemizeddeductions=0,
              childcareexpense=0, uiincome=0, nonAMTdeductions=0,
-             shorttermcapgains=0, ftp=FALSE){
+             shorttermcapgains=0, ftp=FALSE, tsindex=4){
         # Currently I actually couldn't use all these arguments.  I could
         # pass them to get a taxsim file, but I'm not confident that I
         # could then lookup results based on the other values.
+        # tsindex is a variable that takes integer values that represent
+        # which column of the taxsim output should be used to look up
         if (ftp) {
             print("Should get new taxsim data")
         }
         else{
             load('taxsim.RData')
-            big <- expand.grid(income,longtermcapitalgains,dividendincome)
-            a <- big[,1]
-            b <- big[,2]
-            d <- big[,3]
+            #big <- expand.grid(income,longtermcapitalgains,dividendincome)
+            #a <- big[,1]
+            #b <- big[,2]
+            #d <- big[,3]
+            a <- income
+            b <- longtermcapitalgains
+            d <- dividendincome
             tax <- indexvalue(aval=a, bval=b, dval=d, agrid=incomegrid,
                               bgrid=longtermcapitalgainsgrid,
                               dgrid=dividendincomegrid,
-                              func=as.matrix(taxsim[4],1))
+                              func=as.matrix(taxsim[tsindex],1))
             #this calculates the federal tax from taxsim.  The key thing is
             #that the taxsim results have to be in matrix form.  Without
             #that, indexing doesn't work right.
@@ -295,5 +300,5 @@ taxes <-
         }
 }
 t<-as.matrix(taxsim)
-ball<-taxes(income=array(seq(10000,100000,length.out=5)))
+ball<-taxes(income=array(seq(10000,1000000,length.out=5)),longtermcapitalgains=seq(10000,50000,length.out=5),dividendincome=rep(0,5),tsindex=5)
 ball<-taxes()
