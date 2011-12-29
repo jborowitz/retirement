@@ -412,7 +412,7 @@ taxes <- function(income=100000, over65=0, longtermcapitalgains=0,
 
 }
 
-t<-as.matrix(taxsim)
+#t<-as.matrix(taxsim)
 ball<-taxes(income=array(seq(10000,1000000,length.out=5)),longtermcapitalgains=seq(10000,50000,length.out=5),dividendincome=rep(0,5))
 ball<-taxes(income=1e6)
 print(ball$tax)

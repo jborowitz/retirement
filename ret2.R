@@ -59,6 +59,7 @@ imax <- 5000
 kseries <- 500*round(kmax/500*(1+inflation)^t)
 #401k contribution limits: http://en.wikipedia.org/wiki/401(k)#Contribution_limits
 iseries <- 500*round(imax/500*(1+inflation)^t)
+IRAlimit <- iseries
 #IRA contribution limits: http://www.guidestoneretirement.org/retirementplans/contributionlimits/futurecontriblimits.aspx
 #modelling note: since my default assumption is that tax rates and brackets
 #will move with inflation, I think my plan will be to just leave these
@@ -110,6 +111,7 @@ fedtax <-
         #return(taxsim[4])
         return(X)
     }
+funevals <- 0
 pension <- function(retirementDate,sR,ssType){
     #This function calculates the final yearly permanent income, in real
     #terms, if a person saves at a given rate and gets ss under a given
@@ -142,58 +144,133 @@ pension <- function(retirementDate,sR,ssType){
     today <- Sys.Date()
     j <- retirementDate - today
     T1 <- floor(as.double(retirementDate - today)/365.25)
-    returnHistory <- rep(investmentReturn,T2-1)
+    t<-seq(1,T2)
+    finances <- data.frame(t)
+    returnHistory <- rep(investmentReturn,T2)
     returnHistory[t>=T1] <- retirementInvestmentReturn
-    income <- (exp(initialIncome + .1301*t - .0023*t^2)*(1+inflation)^t) * (t < T1)
+    laborincome <- (exp(initialIncome + .1301*t - .0023*t^2)*(1+inflation)^t) * (t < T1)
+    print(initialIncome)
+    print(inflation)
+    print(finances$laborincome)
     #income comes from Heckman's 50 years of Mincer regressions:
     ##http://time.dufe.edu.cn/mingrendt/lochner030404.pdf, table 2 for white Men in 1990
-    retirementConsumptionPath <- ((1+inflation)^t) * (t >=T1)
+    finances$retirementConsumptionPath <- ((1+inflation)^t) * (t >=T1)
     savingsRate <- sR
 
     remaining <- function(retirementIncomeGoal){
         #This functino calculates how much money you would be left with if
         #you had given income levels and then spent at retirementIncomeGoal
         #real levels durign retirement
-        t<-seq(0,T2)
-        finances <- data.frame(t)
-        finances$income <- income
-        finances$currentSavings <- income * savingsRate
-        finances$toIRA <- pmin(finances$currentSavings,IRAlimit)
-        finances$taxableincome <- finances$income - finances$toIRA
-        #TODO: set IRAlimit
-        finances$taxes <- #Comes from taxsim
-        finances$netincome <- #Comes from taxsim too
-
-        X <- diag(T2) - rbind(rep(0,T2),cbind(diag(returnHistory[2:T2]+1),rep(0,T2-1)))
-        q <- savingsRate*income -  retirementConsumptionPath * retirementIncomeGoal
-        q[1] <- q[1]+w0
-        savings <- solve(X) %*% q
-        return((savings[T2])^2)
+        finances <- calcFinance(retirementIncomeGoal)
+        return((finances$savings[T2])^2)
     }
 
-    calcSavings <- function(retirementIncomeGoal){
+    calcFinance <- function(retirementIncomeGoal){
         #This function calculates savings, income, and consumption paths for
-        #a given level of retirement income.  It calculates the state
-        #savings in the same way as the remaining function, but produces
-        #other output too.  is also optimized over to
-        #choose a level of savinsg that is attainable
-        X <- diag(T2) - rbind(rep(0,T2),cbind(diag(returnHistory[2:T2]+1),rep(0,T2-1)))
-        q <- savingsRate*income -  retirementConsumptionPath * retirementIncomeGoal
-        q[1] <- q[1]+w0
-        savings <- solve(X) %*% q
-        #return((savings[T2]-estate*(1+inflation)^T2)^2)
-        ss <- calcSS(ssType)
-        return(list(savings=savings,consumption=(1-savingsRate)*income + retirementConsumptionPath * retirementIncomeGoal,socialSecurity=ss))
-    }
+        #a given level of retirement consumption.  It also calculates taxes.
+        #It returns a 'finances' structure with many elements set.  
+        finances$laborincome <- laborincome
+        finances$currentSavings <- finances$laborincome * savingsRate
+        finances$toIRA <- pmin(finances$currentSavings,IRAlimit)
+        finances$taxableincome <- finances$laborincome - finances$toIRA
+        finances$deductions <- finances$toIRA 
+        #TODO: set IRAlimit
+        finances$capitalgains <- rep(0,T2)
+        finances$capitalgainsrate <- rep(0,T2)
+        finances$taxes <-
+            taxes(income=finances$laborincome,longtermcapitalgains=finances$capitalgains)
+        finances$netincome <- finances$laborincome - finances$taxes$tax + finances$capitalgains
+        numiter <- 1
+        while(sum((finances$taxes$rate - finances$capitalgainsrate)^2)){
+            #print(numiter)
+            print(funevals)
+            #print(length(returnHistory))
+            #print(length(finances$capitalgainsrate))
+            #print(finances$taxes$rate - finances$capitalgainsrate)
+            finances$capitalgainsrate <- finances$taxes$rate
+            #print(finances$capitalgainsrate)
+            X <- diag(T2) -
+            rbind(rep(0,T2),cbind(diag(returnHistory[1:T2-1] *
+                                       (1-finances$capitalgainsrate[1:T2-1]/100)
+                                       + 1),rep(0,T2-1)))
+            #Here I attempt to assume that all capital gains are realized as
+            #accrued (which is totally weird since there's currently no
+            #randomness in returns) but i could change this to be more
+            #reasonable 
 
-    calcSS <- function(type='current'){
+            #print(is.na(returnHistory))
+            #print(is.na(finances$capitalgainsrate))
+            q <- savingsRate*finances$laborincome -  finances$retirementConsumptionPath * retirementIncomeGoal 
+            q[1] <- q[1]+w0
+            print(X[1:5,1])
+            finances$savings <- solve(X) %*% q
+            print(finances$savings[T2])
+            finances$capitalgains <- finances$savings * finances$capitalgainsrate / 100
+            finances$taxes <-
+                taxes(income=finances$laborincome,longtermcapitalgains=finances$capitalgains)
+            numiter <- numiter + 1
+            funevals <- funevals + 1
+        }
+        finances$ss <- calcSS(ssType,finances)
+        finances$consumption <- (1-savingsRate) * finances$laborincome +
+            finances$retirementConsumptionPath * retirementIncomeGoal -
+            finances$taxes$tax 
+        
+        return(finances)
+    }
+    #calcSavings <- function(retirementIncomeGoal){
+        ##This function calculates savings, income, and consumption paths for
+        ##a given level of retirement income.  It calculates the state
+        ##savings in the same way as the remaining function, but produces
+        ##other output too.  is also optimized over to
+        ##choose a level of savinsg that is attainable
+        #t<-seq(1,T2)
+        #IRAlimit <- iseries
+        #finances <- data.frame(t)
+        #finances$laborincome <- laborincome
+        #finances$currentSavings <- laborincome * savingsRate
+        #finances$toIRA <- pmin(finances$currentSavings,IRAlimit)
+        #finances$taxableincome <- finances$laborincome - finances$toIRA
+        #finances$deductions <- finances$toIRA 
+        ##TODO: set IRAlimit
+        #finances$capitalgains <- rep(0,T2)
+        #finances$capitalgainsrate <- rep(0,T2)
+        #finances$taxes <-
+            #taxes(income=finances$laborincome,longtermcapitalgains=finances$capitalgains)
+        #finances$netincome <- finances$laborincome - finances$taxes$tax + finances$capitalgains
+        #numiter <- 1
+        #while(sum((finances$taxes$rate - finances$capitalgainsrate)^2)){
+            #finances$capitalgainsrate <- finances$taxes$rate
+            #X <- diag(T2) -
+            #rbind(rep(0,T2),cbind(diag(returnHistory[2:T2]+1+finances$capitalgainsrate[2:T2]/100),rep(0,T2-1)))
+            #q <- savingsRate*finances$laborincome -  finances$retirementConsumptionPath * retirementIncomeGoal 
+            #q[1] <- q[1]+w0
+            #finances$savings <- solve(X) %*% q
+            #finances$capitalgains <- finances$savings * finances$capitalgainsrate
+            #finances$taxes <-
+                #taxes(income=finances$laborincome,longtermcapitalgains=finances$capitalgains)
+            #numiter <- numiter + 1
+            #funevals <- numiter + 1
+        #}
+        #finances$ss <- calcSS(ssType,finances)
+        #finances$consumption <- (1-savingsRate) * finances$laborincome +
+            #finances$retirementConsumptionPath * retirementIncomeGoal -
+            #finances$taxes$tax 
+        
+        #return(finances)
+        ##return(list(savings=finances$savings, consumption= (1-savingsRate)
+                    ##* finances$laborincome + retirementConsumptionPath *
+                    ##retirementIncomeGoal - finances$taxes$tax, socialSecurity=ss))
+    #}
+
+    calcSS <- function(type='current',finances){
         #This function calculates social security payments given a lifetime
         #stream of earnings
         if (type == 'none') return(0)
         if (type == 'current'){
             #income <- (exp(initialIncome + .1301*t - .0023*t^2)) 
             ficamax <- 106800*(1+ssInflation)^(t-1)
-            indexedIncome <- sapply(income,min,106800*(1+ssInflation)^(t-1))/(avgwage*(1+ssInflation)^(t-1))
+            indexedIncome <- sapply(finances$laborincome,min,106800*(1+ssInflation)^(t-1))/(avgwage*(1+ssInflation)^(t-1))
             aime <- mean(sort(indexedIncome,decreasing=TRUE)[1:35])
             bp1 <- 180 /initwage
             bp2 <- 1085 /initwage
@@ -205,7 +282,7 @@ pension <- function(retirementDate,sR,ssType){
         }
         if (type == 'bowles-simpson'){
             ficamax <- 106800*(1+ssInflation)^(t-1)
-            indexedIncome <- sapply(income,min,106800*(1+ssInflation)^(t-1))/(avgwage*(1+ssInflation)^(t-1))
+            indexedIncome <- sapply(finances$laborincome,min,106800*(1+ssInflation)^(t-1))/(avgwage*(1+ssInflation)^(t-1))
             aime <- mean(sort(indexedIncome,decreasing=TRUE)[1:35])
             bp1 <- 180 /initwage
             bp2 <- 1085 /initwage
@@ -217,7 +294,7 @@ pension <- function(retirementDate,sR,ssType){
         }
         if (type == 'domenici-rivlin'){
             ficamax <- 106800*(1+ssInflation)^(t-1)
-            indexedIncome <- sapply(income,min,106800*(1+ssInflation)^(t-1))/(avgwage*(1+ssInflation)^(t-1))
+            indexedIncome <- sapply(finances$laborincome,min,106800*(1+ssInflation)^(t-1))/(avgwage*(1+ssInflation)^(t-1))
             aime <- mean(sort(indexedIncome,decreasing=TRUE)[1:35])
             bp1 <- 180 /initwage
             bp2 <- 1085 /initwage
@@ -228,12 +305,18 @@ pension <- function(retirementDate,sR,ssType){
             return(ss)
         }
     }
-    optimal <- optimize(remaining, interval=c(1000,1000000))$minimum
-    return(list(consumption=optimal,savings=calcSavings(optimal),income=income))
+    optimal <- optimize(remaining, interval=c(10000,1000000))$minimum
+    print(optimal)
+    fin <- calcFinance(optimal)
+    print('finished optimizing')
+    print(fin$savings)
+    #return(list(consumption=optimal,savings=fin$savings,income=fin$laborincome))
+    return(fin)
 }
 
 s <- seq(.02,.26,by=.08)
 retirementage <- seq(Sys.Date()+29*365.25 ,Sys.Date()+49*365.25, by=5*365.25)
+
 testoutput <- pension(as.Date("2083-10-22"),.15,'current')
 z <- matrix(0,nrow=length(s),ncol=length(retirementage),dimnames=c(list(s),list(retirementage)))
 noss <- matrix(0,nrow=length(s),ncol=length(retirementage),dimnames=c(list(s),list(retirementage)))
