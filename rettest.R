@@ -264,7 +264,7 @@ save(tsfile,taxsim,file="taxsim.RData")
 #22. Long Term Capital Gains or losses.  (+/-)
 source('temp.R')
 
-taxes <-
+taxlookup <-
     function(income=100000, over65=0, longtermcapitalgains=0,
              dividendincome=0, dependents=0, married=0,
              socialsecurityincome=0, state=9, year=2011, spouseincome=0,
@@ -299,6 +299,121 @@ taxes <-
             return(tax)
         }
 }
+taxes <- function(income=100000, over65=0, longtermcapitalgains=0,
+             dividendincome=0, dependents=0, married=0,
+             socialsecurityincome=0, state=9, year=2011, spouseincome=0,
+             propertyincome=0, taxablepensions=0, transferincome=0,
+             rentpaid=0, realestatepaid=0, itemizeddeductions=0,
+             childcareexpense=0, uiincome=0, nonAMTdeductions=0,
+             shorttermcapgains=0 ){
+
+    fed <- taxlookup(tsindex=5, income=income, over65=over65,
+                     longtermcapitalgains=longtermcapitalgains,
+                     dividendincome=dividendincome, dependents=dependents,
+                     married=married,
+                     socialsecurityincome=socialsecurityincome,
+                     state=state, year=year, spouseincome=spouseincome,
+                     propertyincome=propertyincome,
+                     taxablepensions=taxablepensions,
+                     transferincome=transferincome, rentpaid=rentpaid,
+                     realestatepaid=realestatepaid,
+                     itemizeddeductions=itemizeddeductions,
+                     childcareexpense=childcareexpense, uiincome=uiincome,
+                     nonAMTdeductions=nonAMTdeductions,
+                     shorttermcapgains=shorttermcapgains, ftp=FALSE)
+    fedrate <- taxlookup(tsindex=7, income=income, over65=over65,
+                     longtermcapitalgains=longtermcapitalgains,
+                     dividendincome=dividendincome, dependents=dependents,
+                     married=married,
+                     socialsecurityincome=socialsecurityincome,
+                     state=state, year=year, spouseincome=spouseincome,
+                     propertyincome=propertyincome,
+                     taxablepensions=taxablepensions,
+                     transferincome=transferincome, rentpaid=rentpaid,
+                     realestatepaid=realestatepaid,
+                     itemizeddeductions=itemizeddeductions,
+                     childcareexpense=childcareexpense, uiincome=uiincome,
+                     nonAMTdeductions=nonAMTdeductions,
+                     shorttermcapgains=shorttermcapgains, ftp=FALSE)
+    state <- taxlookup(tsindex=4, income=income, over65=over65,
+                     longtermcapitalgains=longtermcapitalgains,
+                     dividendincome=dividendincome, dependents=dependents,
+                     married=married,
+                     socialsecurityincome=socialsecurityincome,
+                     state=state, year=year, spouseincome=spouseincome,
+                     propertyincome=propertyincome,
+                     taxablepensions=taxablepensions,
+                     transferincome=transferincome, rentpaid=rentpaid,
+                     realestatepaid=realestatepaid,
+                     itemizeddeductions=itemizeddeductions,
+                     childcareexpense=childcareexpense, uiincome=uiincome,
+                     nonAMTdeductions=nonAMTdeductions,
+                     shorttermcapgains=shorttermcapgains, ftp=FALSE)
+    staterate <- taxlookup(tsindex=8, income=income, over65=over65,
+                     longtermcapitalgains=longtermcapitalgains,
+                     dividendincome=dividendincome, dependents=dependents,
+                     married=married,
+                     socialsecurityincome=socialsecurityincome,
+                     state=state, year=year, spouseincome=spouseincome,
+                     propertyincome=propertyincome,
+                     taxablepensions=taxablepensions,
+                     transferincome=transferincome, rentpaid=rentpaid,
+                     realestatepaid=realestatepaid,
+                     itemizeddeductions=itemizeddeductions,
+                     childcareexpense=childcareexpense, uiincome=uiincome,
+                     nonAMTdeductions=nonAMTdeductions,
+                     shorttermcapgains=shorttermcapgains, ftp=FALSE)
+    fica <- taxlookup(tsindex=29, income=income, over65=over65,
+                     longtermcapitalgains=longtermcapitalgains,
+                     dividendincome=dividendincome, dependents=dependents,
+                     married=married,
+                     socialsecurityincome=socialsecurityincome,
+                     state=state, year=year, spouseincome=spouseincome,
+                     propertyincome=propertyincome,
+                     taxablepensions=taxablepensions,
+                     transferincome=transferincome, rentpaid=rentpaid,
+                     realestatepaid=realestatepaid,
+                     itemizeddeductions=itemizeddeductions,
+                     childcareexpense=childcareexpense, uiincome=uiincome,
+                     nonAMTdeductions=nonAMTdeductions,
+                     shorttermcapgains=shorttermcapgains, ftp=FALSE)
+    ficarate <- taxlookup(tsindex=9, income=income, over65=over65,
+                     longtermcapitalgains=longtermcapitalgains,
+                     dividendincome=dividendincome, dependents=dependents,
+                     married=married,
+                     socialsecurityincome=socialsecurityincome,
+                     state=state, year=year, spouseincome=spouseincome,
+                     propertyincome=propertyincome,
+                     taxablepensions=taxablepensions,
+                     transferincome=transferincome, rentpaid=rentpaid,
+                     realestatepaid=realestatepaid,
+                     itemizeddeductions=itemizeddeductions,
+                     childcareexpense=childcareexpense, uiincome=uiincome,
+                     nonAMTdeductions=nonAMTdeductions,
+                     shorttermcapgains=shorttermcapgains, ftp=FALSE)
+    #print(fedrate)
+    #print(staterate)
+    #print(ficarate)
+    #print(fed)
+    #print(state)
+    #print(fica)
+    taxsimIncome <- incomegrid[vapply(X=income,FUN=inv,FUN.VALUE=0,incomegrid)]
+    margrate <- ficarate + fedrate + staterate
+    alltax <- state + fed + fica
+    tax <- alltax + (income - taxsimIncome) * margrate / 100
+    #print(alltax)
+    #print(income)
+    #print(taxsimIncome)
+    #print(tax)
+    #print(margrate)
+    return(list(tax=tax,rate=margrate))
+
+
+
+}
+
 t<-as.matrix(taxsim)
-ball<-taxes(income=array(seq(10000,1000000,length.out=5)),longtermcapitalgains=seq(10000,50000,length.out=5),dividendincome=rep(0,5),tsindex=5)
-ball<-taxes()
+ball<-taxes(income=array(seq(10000,1000000,length.out=5)),longtermcapitalgains=seq(10000,50000,length.out=5),dividendincome=rep(0,5))
+ball<-taxes(income=1e6)
+print(ball$tax)
+print(ball$rate)

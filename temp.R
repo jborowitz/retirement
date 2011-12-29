@@ -30,9 +30,11 @@ inv <- function(value,vec){
     #print('vec is ')
     #print(vec)
     if (value > max(vec)){
+        #return(list(index=length(vec),value=vec[length(vec)]))
         return(length(vec))
     }
     if (value <= min(vec)){
+        #return(list(index=1,value=vec[1]))
         return(1)
     }
     low <- sum(vec<value)
@@ -42,12 +44,13 @@ inv <- function(value,vec){
     lowdiff <- abs(lowv-value)
     highdiff <- abs(highv-value)
     if (lowdiff < highdiff){
+        #return(list(index=low,value=vec[low]))
         return(low)
-        #return(lowv)
         #return(list(key=low,value=lowv))
     }
     else{
         return(high)
+        #return(list(index=high,value=vec[high]))
         #return(highv)
         #return(list(key=high,value=highv))
     }
