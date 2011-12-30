@@ -168,7 +168,7 @@ pension <- function(retirementDate,sR,ssType){
         #real levels durign retirement
         finances <- calcFinance(retirementIncomeGoal)
         print(finances$savings[T2-1])
-        return(-1*sum((finances$savings[T2-1])^2))
+        return(sum((finances$savings[T2-1])^2))
     }
 
     calcFinance <- function(retirementIncomeGoal){
@@ -181,8 +181,8 @@ pension <- function(retirementDate,sR,ssType){
         finances$taxableincome <- finances$laborincome - finances$toIRA
         finances$deductions <- finances$toIRA 
         finances$retirementConsumptionPath <- ((1+inflation)^t) * (t >=T1)
-        print(inflation)
-        print(t)
+        finances$returnHistory <- returnHistory
+        finances$retirementIncome <- retirementIncomeGoal
         #TODO: set IRAlimit
         finances$capitalgains <- rep(0,T2)
         finances$capitalgainsrate <- rep(0,T2)
@@ -192,12 +192,9 @@ pension <- function(retirementDate,sR,ssType){
         numiter <- 1
         finances$oldrate <- rep(1,T2)
         while(sum((finances$taxes$rate - finances$capitalgainsrate)^2)>0){
-        #while(sum((finances$taxes$rate - finances$capitalgainsrate)^2)>0 && sum((finances$taxes$rate - finances$oldrate)^2) > 0){
             print(funevals)
             finances$oldrate <- finances$capitalgainsrate
             finances$capitalgainsrate <- finances$taxes$rate
-            #print(finances$taxes)
-            #print(finances$capitalgainsrate)
             X <- diag(T2) -
             rbind(rep(0,T2),cbind(diag(returnHistory[1:T2-1] *
                                        (1-finances$capitalgainsrate[1:T2-1]/100)
@@ -210,9 +207,7 @@ pension <- function(retirementDate,sR,ssType){
 
             q <- savingsRate*finances$laborincome -  finances$retirementConsumptionPath * retirementIncomeGoal 
             q[1] <- q[1]+w0
-            print(X[1:5,1])
             finances$savings <- solve(X) %*% q
-            print(cbind(finances$savings,finances$returnHistory,finances$capitalgainsrate))
             finances$capitalgains <- finances$savings * finances$returnHistory * finances$capitalgainsrate / 100
             finances$taxes <-
                 taxes(income=finances$laborincome,longtermcapitalgains=finances$capitalgains)
@@ -280,7 +275,7 @@ pension <- function(retirementDate,sR,ssType){
 s <- seq(.02,.26,by=.08)
 retirementage <- seq(Sys.Date()+29*365.25 ,Sys.Date()+49*365.25, by=5*365.25)
 
-testoutput <- pension(as.Date("2053-10-22"),.15,'current')
+testoutput <- pension(as.Date("2053-10-22"),.08,'current')
 z <- matrix(0,nrow=length(s),ncol=length(retirementage),dimnames=c(list(s),list(retirementage)))
 noss <- matrix(0,nrow=length(s),ncol=length(retirementage),dimnames=c(list(s),list(retirementage)))
 today <- Sys.Date()
