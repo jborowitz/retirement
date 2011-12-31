@@ -1,20 +1,226 @@
-ssInflation <- .024
-earlyfactor <- function(birthday,retDate){
+incomegrid <- seq(0,500000,by=25000)
+longtermcapitalgainsgrid <- seq(0,5000000,by=1000000)
+dividendincomegrid <- seq(0,5000000,by=1000000)
+#incomegrid <- income
+#longtermcapitalgainsgrid <- longtermcapitalgains
+#dividendincomegrid <- dividendincome
+
+#Object definitions:
+#finances
+#- 
+#decisions
+#-T1 - the retirement period
+#-laborincome - the income received over the working life
+#-retirementIncomeGoal - the 2011 dollar value of consumption for each year
+#of retirment.  In general there is no check on decision feasibility outside
+#of the program logic, so this could be trillions of dollars or more per
+#year.
+#-savingsRate - The fraction of labor income saved every year
+#- In general, I would add taxsim decision parameters in here as well.  None are
+#currently supported, but things like children, marital status, and state of
+#residence should go in here - this way you could call pension(decisions)
+#for a range of decisions and then compare the outcomes
+#-ssType
+#parameters
+#-IRAlimit
+#-
+
+inv <- function(value,vec){
+    #This code takes value and returns the index of the largest element of
+    #vec (a sorted vector) that value is greater than.  It can be called
+    #with vapply as in indexvalue
+    if (value > max(vec)){
+        return(length(vec))
+    }
+    if (value <= min(vec)){
+        return(1)
+    }
+    low <- sum(vec<value)
+    high <- low+1
+    lowv <- vec[low]
+    highv <- vec[high]
+    lowdiff <- abs(lowv-value)
+    highdiff <- abs(highv-value)
+    if (lowdiff < highdiff){
+        return(low)
+    }
+    else{
+        return(high)
+    }
+}
+
+indexvalue <- function(aval,bval,dval,agrid, bgrid, dgrid, func ){
+    #this function takes 3 function values and returns the indexes that
+    #would need to be used to look up the three dimensional function value.
+    #So there's a function f(aval,bval,cval) that is represented by some
+    #discreete points a1...an, b1...bn, and c1...cn, and we want to know
+    #f(aval, bval, cval), but we really need to know the index ai, bi, ci, 
+    #which would best approximate f(aval, bval, cval).  
+    # I would like to extend the function to take 3 equal length vectors
+    # and one array representign f(a,b,c) and return a vector that is the
+    # value of f for these vectors.
+    acall <- vapply(X=aval,FUN=inv,FUN.VALUE=0,agrid)
+    bcall <- vapply(X=bval,FUN=inv,FUN.VALUE=0,bgrid)
+    dcall <- vapply(X=dval,FUN=inv,FUN.VALUE=0,dgrid)
+    output <- array(func,dim=c(length(agrid),length(bgrid),length(dgrid)))
+    #The key insight here is expand.grid(a1,a2,a3) to
+    #array(.,dim=c(a1,a2,a3)) is what orders things into a 3d array
+    #return(list(output=output,val=output[acall$key,bcall$key,dcall$key]))
+    #Used to have key and value returned from inv, and this worked
+    #return(list(output=output,val=output[cbind(acall,bcall,dcall)]))
+    return(output[cbind(acall,bcall,dcall)])
+}
+
+taxlookup <-
+    function(income=100000, over65=0, longtermcapitalgains=0,
+             dividendincome=0, dependents=0, married=0,
+             socialsecurityincome=0, state=9, year=2011, spouseincome=0,
+             propertyincome=0, taxablepensions=0, transferincome=0,
+             rentpaid=0, realestatepaid=0, itemizeddeductions=0,
+             childcareexpense=0, uiincome=0, nonAMTdeductions=0,
+             shorttermcapgains=0, ftp=FALSE, tsindex=4){
+        # Currently I actually couldn't use all these arguments.  I could
+        # pass them to get a taxsim file, but I'm not confident that I
+        # could then lookup results based on the other values.
+        # tsindex is a variable that takes integer values that represent
+        # which column of the taxsim output should be used to look up
+        if (ftp) {
+            print("Should get new taxsim data")
+        }
+        else{
+            load('taxsim.RData')
+            a <- income
+            b <- longtermcapitalgains
+            d <- dividendincome
+            tax <- indexvalue(aval=a, bval=b, dval=d, agrid=incomegrid,
+                              bgrid=longtermcapitalgainsgrid,
+                              dgrid=dividendincomegrid,
+                              func=as.matrix(taxsim[tsindex],1))
+            #this calculates the federal tax from taxsim.  The key thing is
+            #that the taxsim results have to be in matrix form.  Without
+            #that, indexing doesn't work right.
+            return(tax)
+        }
+}
+
+taxes <- function(income=100000, over65=0, longtermcapitalgains=0,
+             dividendincome=0, dependents=0, married=0,
+             socialsecurityincome=0, state=9, year=2011, spouseincome=0,
+             propertyincome=0, taxablepensions=0, transferincome=0,
+             rentpaid=0, realestatepaid=0, itemizeddeductions=0,
+             childcareexpense=0, uiincome=0, nonAMTdeductions=0,
+             shorttermcapgains=0 ){
+
+    fed <- taxlookup(tsindex=5, income=income, over65=over65,
+                     longtermcapitalgains=longtermcapitalgains,
+                     dividendincome=dividendincome, dependents=dependents,
+                     married=married,
+                     socialsecurityincome=socialsecurityincome,
+                     state=state, year=year, spouseincome=spouseincome,
+                     propertyincome=propertyincome,
+                     taxablepensions=taxablepensions,
+                     transferincome=transferincome, rentpaid=rentpaid,
+                     realestatepaid=realestatepaid,
+                     itemizeddeductions=itemizeddeductions,
+                     childcareexpense=childcareexpense, uiincome=uiincome,
+                     nonAMTdeductions=nonAMTdeductions,
+                     shorttermcapgains=shorttermcapgains, ftp=FALSE)
+    fedrate <- taxlookup(tsindex=7, income=income, over65=over65,
+                     longtermcapitalgains=longtermcapitalgains,
+                     dividendincome=dividendincome, dependents=dependents,
+                     married=married,
+                     socialsecurityincome=socialsecurityincome,
+                     state=state, year=year, spouseincome=spouseincome,
+                     propertyincome=propertyincome,
+                     taxablepensions=taxablepensions,
+                     transferincome=transferincome, rentpaid=rentpaid,
+                     realestatepaid=realestatepaid,
+                     itemizeddeductions=itemizeddeductions,
+                     childcareexpense=childcareexpense, uiincome=uiincome,
+                     nonAMTdeductions=nonAMTdeductions,
+                     shorttermcapgains=shorttermcapgains, ftp=FALSE)
+    state <- taxlookup(tsindex=4, income=income, over65=over65,
+                     longtermcapitalgains=longtermcapitalgains,
+                     dividendincome=dividendincome, dependents=dependents,
+                     married=married,
+                     socialsecurityincome=socialsecurityincome,
+                     state=state, year=year, spouseincome=spouseincome,
+                     propertyincome=propertyincome,
+                     taxablepensions=taxablepensions,
+                     transferincome=transferincome, rentpaid=rentpaid,
+                     realestatepaid=realestatepaid,
+                     itemizeddeductions=itemizeddeductions,
+                     childcareexpense=childcareexpense, uiincome=uiincome,
+                     nonAMTdeductions=nonAMTdeductions,
+                     shorttermcapgains=shorttermcapgains, ftp=FALSE)
+    staterate <- taxlookup(tsindex=8, income=income, over65=over65,
+                     longtermcapitalgains=longtermcapitalgains,
+                     dividendincome=dividendincome, dependents=dependents,
+                     married=married,
+                     socialsecurityincome=socialsecurityincome,
+                     state=state, year=year, spouseincome=spouseincome,
+                     propertyincome=propertyincome,
+                     taxablepensions=taxablepensions,
+                     transferincome=transferincome, rentpaid=rentpaid,
+                     realestatepaid=realestatepaid,
+                     itemizeddeductions=itemizeddeductions,
+                     childcareexpense=childcareexpense, uiincome=uiincome,
+                     nonAMTdeductions=nonAMTdeductions,
+                     shorttermcapgains=shorttermcapgains, ftp=FALSE)
+    fica <- taxlookup(tsindex=29, income=income, over65=over65,
+                     longtermcapitalgains=longtermcapitalgains,
+                     dividendincome=dividendincome, dependents=dependents,
+                     married=married,
+                     socialsecurityincome=socialsecurityincome,
+                     state=state, year=year, spouseincome=spouseincome,
+                     propertyincome=propertyincome,
+                     taxablepensions=taxablepensions,
+                     transferincome=transferincome, rentpaid=rentpaid,
+                     realestatepaid=realestatepaid,
+                     itemizeddeductions=itemizeddeductions,
+                     childcareexpense=childcareexpense, uiincome=uiincome,
+                     nonAMTdeductions=nonAMTdeductions,
+                     shorttermcapgains=shorttermcapgains, ftp=FALSE)
+    ficarate <- taxlookup(tsindex=9, income=income, over65=over65,
+                     longtermcapitalgains=longtermcapitalgains,
+                     dividendincome=dividendincome, dependents=dependents,
+                     married=married,
+                     socialsecurityincome=socialsecurityincome,
+                     state=state, year=year, spouseincome=spouseincome,
+                     propertyincome=propertyincome,
+                     taxablepensions=taxablepensions,
+                     transferincome=transferincome, rentpaid=rentpaid,
+                     realestatepaid=realestatepaid,
+                     itemizeddeductions=itemizeddeductions,
+                     childcareexpense=childcareexpense, uiincome=uiincome,
+                     nonAMTdeductions=nonAMTdeductions,
+                     shorttermcapgains=shorttermcapgains, ftp=FALSE)
+    taxsimIncome <- incomegrid[vapply(X=income,FUN=inv,FUN.VALUE=0,incomegrid)]
+    margrate <- ficarate + fedrate + staterate
+    alltax <- state + fed + fica
+    tax <- alltax + (income - taxsimIncome) * margrate / 100
+    return(list(tax=tax,rate=margrate))
+}
+
+earlyfactor <- function(decisions,parameters){
     # Thsi function takes a person's birthday and retirement date and
     # returns the social security multiplier that determines how much
     # higher or lower the monthly benefit payment will be
     today <- Sys.Date()
     now <- as.numeric(format(today,"%Y"))
-    myage <- floor(as.double(today-birthday)/365.25)
-    birthyear <- as.numeric(format(birthday,"%Y"))
-    if (birthyear < 1938)  normalretirementdate <- birthday + 65*365.25 
-    if (birthyear >= 1938 & birthyear < 1943) normalretirementdate <- birthday + 65*365.25 +365.35 * (birthyear - 1937)/6
-    if (birthyear >= 1943 & birthyear < 1955) normalretirementdate <- birthday + 66*365.25
-    if (birthyear >= 1955 & birthyear < 1961) normalretirementdate <- birthday + 66*365.25 +365.35 * (birthyear - 1954)/6
-    if (birthyear > 1960) normalretirementdate <- birthday + 67*365.25
+    myage <- floor(as.double(today-parameters$birthday)/365.25)
+    birthyear <- as.numeric(format(parameters$birthday,"%Y"))
+    if (birthyear < 1938)  normalretirementdate <- parameters$birthday + 65*365.25 
+    if (birthyear >= 1938 & birthyear < 1943) normalretirementdate <-
+        parameters$birthday + 65*365.25 +365.35 * (birthyear - 1937)/6
+    if (birthyear >= 1943 & birthyear < 1955) normalretirementdate <-
+        parameters$birthday + 66*365.25
+    if (birthyear >= 1955 & birthyear < 1961) normalretirementdate <-
+        parameters$birthday + 66*365.25 +365.35 * (birthyear - 1954)/6
+    if (birthyear > 1960) normalretirementdate <- parameters$birthday + 67*365.25
     as.numeric(format(normalretirementdate,"%Y"))-birthyear
     lateprice <- min(.08,.03+ceiling((birthyear - 1924)/2)*.005)
-    retirementadjustmentmonths <- as.numeric(min(retDate,birthday + 70*365.25)-normalretirementdate)/(365.25/12)
+    retirementadjustmentmonths <- as.numeric(min(decisions$retirementDate,parameters$birthday + 70*365.25)-normalretirementdate)/(365.25/12)
     if (retirementadjustmentmonths < 0){
         retirementadjustmentmonths <- ceiling(retirementadjustmentmonths) 
         if (retirementadjustmentmonths < -36) retfactor <- .8+max(5/1200*(retirementadjustmentmonths-36),-.1)
@@ -27,96 +233,150 @@ earlyfactor <- function(birthday,retDate){
     return(retfactor)
 }
 
-mybirthday <- as.Date('1984-11-18')
-today <- Sys.Date()
-myage <- floor(as.double(today-mybirthday)/365.25)
-now <- as.numeric(format(today,"%Y"))
-
-T2<-97-myage
-w0<-25000
-t<-seq(1,T2)
-investmentReturn<-.04
-#investmentReturn<-.04
-#This return level is from Shiller's website:
-#http://www.econ.yale.edu/~shiller/data.htm
-retirementInvestmentReturn<-.03
-inflation<-.02
-#initialIncome=log(50000)
-initialIncome=log(90000)
-a <- read.csv('wages.csv',head=TRUE,sep="\t")
-#These are historical wage levels for the last 59 years for SS
-res <- line(a$Year,log(a$Index))
-#incomeIndex[a$Year] <- a$Index
-time <- seq(min(a$Year), now+T2-1)
-#p <- exp(res$coefficients[1]  + res$coefficients[2]*time)
-#p <- 40711.61 * (1+ssInflation)^(time-2009)
-#p[1:length(a$Index)] <- a$Index
-#scale <- p/p[1]
-
-avgwage <- 40711.61 
-kmax <- 16500
-imax <- 5000
-kseries <- 500*round(kmax/500*(1+inflation)^t)
-#401k contribution limits: http://en.wikipedia.org/wiki/401(k)#Contribution_limits
-iseries <- 500*round(imax/500*(1+inflation)^t)
-IRAlimit <- iseries
-#IRA contribution limits: http://www.guidestoneretirement.org/retirementplans/contributionlimits/futurecontriblimits.aspx
-#modelling note: since my default assumption is that tax rates and brackets
-#will move with inflation, I think my plan will be to just leave these
-#contribution limits equal at a given time, and then implicitly adjust for
-#inflation by reinflating a 2008 tax situation to future dollars.
-
-#http://www.ssa.gov/oact/COLA/piaformula.html
-initwage <- 9779.44
-bp1 <- round(180 * avgwage/initwage)
-bp2 <- round(1085 *avgwage/initwage)
-estate <- 500000
-fedtax <-
-    function(X){
-        income <- X$income
-        over65 <- X$over65
-        longtermcapitalgains <- X$longtermcapitalgains
-        dividendincome <- X$dividendincome
-        dependents <- X$dependents
-
-        married <- 1
-        socialsecurityincome <- 0
-        state <- 9
-        year <- 1997
-        spouseincome <- 0
-        propertyincome <- 0
-        taxablepensions <- 0
-        transferincome <- 0 
-        rentpaid <- 0
-        realestatepaid <- 0
-        itemizeddeductions <- 0
-        childcareexpense <- 0
-        uiincome <- 0
-        nonAMTdeductions <- 0
-        shorttermcapgains <- 0
-        caseid <- 1
-#tsfile <-
-    #cbind(seq(1,dim(big)[1]),year,state,married,dependents,big$Var2,big$Var1,spouseincome,big$Var4,propertyincome,taxablepensions,socialsecurityincome,transferincome,rentpaid,realestatepaid,itemizeddeductions,childcareexpense,uiincome,big$Var5,nonAMTdeductions,shorttermcapgains,big$Var3)
-        tsfile <-
-            cbind(seq(1,dim(big)[1]),year,state,married,dependents,over65,income,spouseincome,dividendincome,propertyincome,taxablepensions,socialsecurityincome,transferincome,rentpaid,realestatepaid,itemizeddeductions,childcareexpense,uiincome,dependents,nonAMTdeductions,shorttermcapgains,longtermcapitalgains)
-        temp<- file('test.txt')
-        temptable<- file('testtable.txt')
-        write(headline,temp,append=FALSE) 
-        write.table(tsfile, temptable, row.names=FALSE, col.names=FALSE, append=TRUE)
-        system('cat testtable.txt >> test.txt')
-        ftpUpload('test.txt',url)
-        taxsim <- read.table(textConnection(getURL(outputurl)))
-        X$fed <- taxsim[4]
-        X$state <- taxsim[5]
-        #return(taxsim[4])
-        return(X)
-    }
 funevals <- 0
-pension <- function(retirementDate,sR,ssType){
+remaining <- function(retirementIncomeGuess, decisions,parameters){
+    decisions$retirementIncomeGoal <- retirementIncomeGuess
+    print('called remaining with income goal:')
+    print(decisions$retirementIncomeGoal)
+    #This functino calculates how much money you would be left with if
+    #you had given income levels and then spent at retirementIncomeGoal
+    #real levels durign retirement
+    finances <- calcFinance(decisions,parameters)
+    #print(finances$savings[decisions$T2-1])
+    print('remaining value is:')
+    print(finances$savings[parameters$T2])
+    return(sum((finances$savings[parameters$T2])^2))
+}
+
+calcFinance <- function(decisions, parameters){
+    #This function calculates savings, income, and consumption paths for
+    #a given level of retirement consumption.  It also calculates taxes.
+    #It returns a 'finances' structure with many elements set.  There is no
+    #check to make sure this returns  'feasible' finances.
+    t <- parameters$t
+    T1 <- decisions$T1
+    T2 <- parameters$T2
+    inflation <- parameters$inflation
+    initialIncome <- parameters$initialIncome
+    finances <- NULL
+    finances$laborincome <- laborincome(initialIncome=initialIncome,
+                                        inflation=inflation, T1=T1,t=t)
+
+    finances$currentSavings <- finances$laborincome * decisions$savingsRate
+    finances$toIRA <- pmin(finances$currentSavings,parameters$IRAlimit)
+    #finances$taxableincome <- finances$laborincome - finances$toIRA
+    #finances$deductions <- finances$toIRA 
+    finances$retirementConsumptionPath <- ((1+parameters$inflation)^t) * (t >=T1)
+    finances$returnHistory <- parameters$returnHistory
+    finances$retirementIncome <- decisions$retirementIncomeGoal
+    finances$capitalgains <- rep(0,T2)
+    finances$capitalgainsrate <- rep(0,T2)
+    finances$taxes <-
+        taxes(income=finances$laborincome,longtermcapitalgains=finances$capitalgains)
+    finances$netincome <- finances$laborincome - finances$taxes$tax + finances$capitalgains
+    numiter <- 1
+    finances$oldrate <- rep(1,T2)
+    while(sum((finances$taxes$rate - finances$capitalgainsrate)^2)>0){
+        print('function evals')
+        print(funevals)
+        finances$oldrate <- finances$capitalgainsrate
+        finances$capitalgainsrate <- finances$taxes$rate
+        X <- diag(T2) -
+        rbind(rep(0,T2),cbind(diag(decisions$returnHistory[1:T2-1] *
+                                   (1-finances$capitalgainsrate[1:T2-1]/100)
+                                   + 1),rep(0,T2-1)))
+        #rbind(rep(0,T2),cbind(diag(returnHistory[1:T2-1] * (1) + 1),rep(0,T2-1)))
+        #Here I attempt to assume that all capital gains are realized as
+        #accrued (which is totally weird since there's currently no
+        #randomness in returns) but i could change this to be more
+        #reasonable 
+
+        q <- decisions$savingsRate*finances$laborincome - finances$retirementConsumptionPath * finances$retirementIncome
+        q[1] <- q[1]+parameters$w0
+        finances$savings <- solve(X) %*% q
+        finances$capitalgains <- finances$savings * decisions$returnHistory * finances$capitalgainsrate / 100
+        finances$taxes <-
+            taxes(income=finances$laborincome,longtermcapitalgains=finances$capitalgains)
+        numiter <- numiter + 1
+        funevals <- funevals + 1
+        #print('made it here')
+    }
+    finances$ss <- calcSS(decisions,parameters,finances)
+    #Note that calcSS takes a PARTIALLY COMPLETED finances object - this
+    #could cause problems at some point
+    finances$consumption <- (1-decisions$savingsRate) * finances$laborincome +
+        finances$retirementConsumptionPath * decisions$retirementIncomeGoal -
+        finances$taxes$tax 
+    
+    return(finances)
+}
+
+calcSS <- function(decisions, parameters, finances){
+    #This function calculates social security payments given a lifetime
+    #stream of earnings
+    type <- parameters$ssType
+    print(type)
+    t <- parameters$t
+    T1 <- decisions$T1
+    if (type == 'none') return(0)
+    if (type == 'current'){
+        ficamax <- 106800*(1+parameters$ssInflation)^(t-1)
+        indexedIncome <-
+            sapply(finances$laborincome,min,106800*(1+parameters$ssInflation)^(t-1))/(parameters$avgwage*(1+parameters$ssInflation)^(t-1))
+        aime <- mean(sort(indexedIncome,decreasing=TRUE)[1:35])
+        bp1 <- 180 /parameters$initwage
+        bp2 <- 1085 /parameters$initwage
+        piaFactor <- .9*min(aime,bp1) + .32*(min(aime,bp2)-bp1) + .15*min(aime-bp2,0)
+        yearlyFactor <- 12 * piaFactor
+        early <- earlyfactor(decisions,parameters)
+        ss <- early * yearlyFactor * parameters$avgwage*(1+parameters$ssInflation)^(t-1) * (t >=T1)
+        return(ss)
+    }
+    if (type == 'bowles-simpson'){
+        #Bowles-Simpson is currently not implemented
+        ficamax <- 106800*(1+parameters$ssInflation)^(t-1)
+        indexedIncome <-
+            sapply(finances$laborincome,min,106800*(1+parameters$ssInflation)^(t-1)) /(parameters$avgwage*(1+parameters$ssInflation)^(t-1))
+        aime <- mean(sort(indexedIncome,decreasing=TRUE)[1:35])
+        bp1 <- 180 /parameters$initwage
+        bp2 <- 1085 /parameters$initwage
+        piaFactor <- .9*min(aime,bp1) + .32*(min(aime,bp2)-bp1) + .15*min(aime-bp2,0)
+        yearlyFactor <- 12 * piaFactor
+        early <- earlyfactor(decisions,parameters)
+        ss <- early * yearlyFactor * parameters$avgwage*(1+parameters$ssInflation)^(t-1) * (t >=T1)
+        return(ss)
+    }
+    if (type == 'domenici-rivlin'){
+        #Domenici-Rivlin is currently not implemented
+        ficamax <- 106800*(1+parameters$ssInflation)^(t-1)
+        indexedIncome <-
+            sapply(finances$laborincome,min,106800*(1+parameters$ssInflation)^(t-1)) /(parameters$avgwage*(1+parameters$ssInflation)^(t-1))
+        aime <- mean(sort(indexedIncome,decreasing=TRUE)[1:35])
+        bp1 <- 180 /parameters$initwage
+        bp2 <- 1085 /parameters$initwage
+        piaFactor <- .9*min(aime,bp1) + .32*(min(aime,bp2)-bp1) + .15*min(aime-bp2,0)
+        yearlyFactor <- 12 * piaFactor
+        early <- earlyfactor(decisions,parameters)
+        ss <- early * yearlyFactor * parameters$avgwage*(1+parameters$ssInflation)^(t-1) * (t >=T1)
+        return(ss)
+    }
+}
+
+laborincome <- function(initialIncome=50000,inflation = .02, T1= 40, t =
+                        seq(1,70)){
+
+    return((exp(initialIncome + .1301*t - .0023*t^2)*(1+inflation)^t) * (t < T1))
+    #income comes from Heckman's 50 years of Mincer regressions:
+    ##http://time.dufe.edu.cn/mingrendt/lochner030404.pdf, table 2 for white Men in 1990
+}
+pension <- function(decisions, parameters){
     #This function calculates the final yearly permanent income, in real
     #terms, if a person saves at a given rate and gets ss under a given
     #rule, and retires at a certain time.  I will likely in the future make
     #this take income as an input too.
+
+    #It returns a 'finances' object with the final yearly pension so that by
+    #the end of life, money goes close to zero
 
     #Other things that we want to calculate:
     #401k
@@ -137,191 +397,42 @@ pension <- function(retirementDate,sR,ssType){
         #social security income
         #kid/dependents
         
+    #T1 <- floor(as.double(parameters$retirementDate - parameters$today)/365.25) 
+    T1 <- decisions$T1
+    t <- parameters$t
+   # calculate T1 based on retirement date
+    potentialIncome <-  laborincome(initialIncome=parameters$initialIncome,
+                                    inflation=parameters$inflation,
+                                    T1=parameters$T2,t=t)
+    income <- potentialIncome
+    income[t>T1] <- 0
 
-    # TODO: make a call to fedtax to get tax rates
-    # TODO: Integrate taxes into formula
-
-    today <- Sys.Date()
-    j <- retirementDate - today
-    T1 <- floor(as.double(retirementDate - today)/365.25)
-    print(T1)
-    print(T2)
-    t<-seq(1,T2)
-    finances <- data.frame(t)
-    returnHistory <- rep(investmentReturn,T2)
-    returnHistory[t>=T1] <- retirementInvestmentReturn
-    laborincome <- (exp(initialIncome + .1301*t - .0023*t^2)*(1+inflation)^t) * (t < T1)
-    print(initialIncome)
-    print(inflation)
+    #finances <- data.frame(t)
+    #returnHistory <- rep(parameters$investmentReturn,parametersT2)
+    #returnHistory[t>=T1] <- parameters$retirementInvestmentReturn
+    #laborincome <- (exp(initialIncome + .1301*t - .0023*t^2)*(1+inflation)^t) * (t < T1)
+    #print(parameters$initialIncome)
+    #print(parameters$inflation)
     #print(finances$laborincome)
-    #income comes from Heckman's 50 years of Mincer regressions:
-    ##http://time.dufe.edu.cn/mingrendt/lochner030404.pdf, table 2 for white Men in 1990
     #finances$retirementConsumptionPath <- ((1+inflation)^t) * (t >=T1)
     #print(finances$retirementConsumptionPath)
-    savingsRate <- sR
+    #savingsRate <- sR
 
-    remaining <- function(retirementIncomeGoal){
-        print('called remaining')
-        print(retirementIncomeGoal)
-        #This functino calculates how much money you would be left with if
-        #you had given income levels and then spent at retirementIncomeGoal
-        #real levels durign retirement
-        finances <- calcFinance(retirementIncomeGoal)
-        print(finances$savings[T2-1])
-        return(sum((finances$savings[T2-1])^2))
-    }
 
-    calcFinance <- function(retirementIncomeGoal){
-        #This function calculates savings, income, and consumption paths for
-        #a given level of retirement consumption.  It also calculates taxes.
-        #It returns a 'finances' structure with many elements set.  
-        finances$laborincome <- laborincome
-        finances$currentSavings <- finances$laborincome * savingsRate
-        finances$toIRA <- pmin(finances$currentSavings,IRAlimit)
-        finances$taxableincome <- finances$laborincome - finances$toIRA
-        finances$deductions <- finances$toIRA 
-        finances$retirementConsumptionPath <- ((1+inflation)^t) * (t >=T1)
-        finances$returnHistory <- returnHistory
-        finances$retirementIncome <- retirementIncomeGoal
-        #TODO: set IRAlimit
-        finances$capitalgains <- rep(0,T2)
-        finances$capitalgainsrate <- rep(0,T2)
-        finances$taxes <-
-            taxes(income=finances$laborincome,longtermcapitalgains=finances$capitalgains)
-        finances$netincome <- finances$laborincome - finances$taxes$tax + finances$capitalgains
-        numiter <- 1
-        finances$oldrate <- rep(1,T2)
-        while(sum((finances$taxes$rate - finances$capitalgainsrate)^2)>0){
-            print(funevals)
-            finances$oldrate <- finances$capitalgainsrate
-            finances$capitalgainsrate <- finances$taxes$rate
-            X <- diag(T2) -
-            rbind(rep(0,T2),cbind(diag(returnHistory[1:T2-1] *
-                                       (1-finances$capitalgainsrate[1:T2-1]/100)
-                                       + 1),rep(0,T2-1)))
-            #rbind(rep(0,T2),cbind(diag(returnHistory[1:T2-1] * (1) + 1),rep(0,T2-1)))
-            #Here I attempt to assume that all capital gains are realized as
-            #accrued (which is totally weird since there's currently no
-            #randomness in returns) but i could change this to be more
-            #reasonable 
-
-            q <- savingsRate*finances$laborincome -  finances$retirementConsumptionPath * retirementIncomeGoal 
-            q[1] <- q[1]+w0
-            finances$savings <- solve(X) %*% q
-            finances$capitalgains <- finances$savings * finances$returnHistory * finances$capitalgainsrate / 100
-            finances$taxes <-
-                taxes(income=finances$laborincome,longtermcapitalgains=finances$capitalgains)
-            numiter <- numiter + 1
-            funevals <- funevals + 1
-        }
-        finances$ss <- calcSS(ssType,finances)
-        finances$consumption <- (1-savingsRate) * finances$laborincome +
-            finances$retirementConsumptionPath * retirementIncomeGoal -
-            finances$taxes$tax 
-        
-        return(finances)
-    }
-    calcSS <- function(type='current',finances){
-        #This function calculates social security payments given a lifetime
-        #stream of earnings
-        if (type == 'none') return(0)
-        if (type == 'current'){
-            #income <- (exp(initialIncome + .1301*t - .0023*t^2)) 
-            ficamax <- 106800*(1+ssInflation)^(t-1)
-            indexedIncome <- sapply(finances$laborincome,min,106800*(1+ssInflation)^(t-1))/(avgwage*(1+ssInflation)^(t-1))
-            aime <- mean(sort(indexedIncome,decreasing=TRUE)[1:35])
-            bp1 <- 180 /initwage
-            bp2 <- 1085 /initwage
-            piaFactor <- .9*min(aime,bp1) + .32*(min(aime,bp2)-bp1) + .15*min(aime-bp2,0)
-            yearlyFactor <- 12 * piaFactor
-            early <- earlyfactor(mybirthday,retirementDate)
-            ss <- early * yearlyFactor * avgwage*(1+ssInflation)^(t-1) * (t >=T1)
-            return(ss)
-        }
-        if (type == 'bowles-simpson'){
-            ficamax <- 106800*(1+ssInflation)^(t-1)
-            indexedIncome <- sapply(finances$laborincome,min,106800*(1+ssInflation)^(t-1))/(avgwage*(1+ssInflation)^(t-1))
-            aime <- mean(sort(indexedIncome,decreasing=TRUE)[1:35])
-            bp1 <- 180 /initwage
-            bp2 <- 1085 /initwage
-            piaFactor <- .9*min(aime,bp1) + .32*(min(aime,bp2)-bp1) + .15*min(aime-bp2,0)
-            yearlyFactor <- 12 * piaFactor
-            early <- earlyfactor(mybirthday,retirementDate)
-            ss <- early * yearlyFactor * avgwage*(1+ssInflation)^(t-1) * (t >=T1)
-            return(ss)
-        }
-        if (type == 'domenici-rivlin'){
-            ficamax <- 106800*(1+ssInflation)^(t-1)
-            indexedIncome <- sapply(finances$laborincome,min,106800*(1+ssInflation)^(t-1))/(avgwage*(1+ssInflation)^(t-1))
-            aime <- mean(sort(indexedIncome,decreasing=TRUE)[1:35])
-            bp1 <- 180 /initwage
-            bp2 <- 1085 /initwage
-            piaFactor <- .9*min(aime,bp1) + .32*(min(aime,bp2)-bp1) + .15*min(aime-bp2,0)
-            yearlyFactor <- 12 * piaFactor
-            early <- earlyfactor(mybirthday,retirementDate)
-            ss <- early * yearlyFactor * avgwage*(1+ssInflation)^(t-1) * (t >=T1)
-            return(ss)
-        }
-    }
-    optimal <- optimize(remaining, interval=c(10000,1000000))$minimum
+    optimal <- optimize(remaining, interval=c(10000,1000000), decisions, parameters)$minimum
+    decisions$retirementIncomeGoal <- optimal
     print(optimal)
-    fin <- calcFinance(optimal)
+    finances <- calcFinance(decisions, parameters)
     print('finished optimizing')
-    print(fin$savings)
-    #return(list(consumption=optimal,savings=fin$savings,income=fin$laborincome))
-    return(fin)
+    print(finances$savings)
+    return(finances)
 }
 
-s <- seq(.02,.26,by=.08)
-retirementage <- seq(Sys.Date()+29*365.25 ,Sys.Date()+49*365.25, by=5*365.25)
-
-testoutput <- pension(as.Date("2053-10-22"),.08,'current')
-z <- matrix(0,nrow=length(s),ncol=length(retirementage),dimnames=c(list(s),list(retirementage)))
-noss <- matrix(0,nrow=length(s),ncol=length(retirementage),dimnames=c(list(s),list(retirementage)))
-today <- Sys.Date()
-
-for(i in 1:length(s)){
-    for(j in 1:length(retirementage)){
-        result <- pension(retirementage[j],s[i],'current')
-        ssStartTime <- floor(as.double(retirementage[j]-today)/365.25)
-        #print(c(result$savings$socialSecurity[result$savings$socialSecurity>0][1]*(1+inflation)^(-ssStartTime),result$consumption))
-        z[i,j] <- result$consumption + result$savings$socialSecurity[result$savings$socialSecurity>0][1]*(1+inflation)^(-ssStartTime)
-        noss[i,j] <- result$consumption 
-        #z and noss are matrices of final permanent incomes at retirement,
-        #in current dollars, for retirement at age j and saving at rate s
-    }
-}
-
-pdf('Pensions.pdf')
-a <- floor(as.double(retirementage-mybirthday)/365.25)
-plot(a,z[length(s),],type="n",ylim=range(z,noss),xlab="Retirement Age",ylab="Retirement Pension Level, in 2011 $")
-title(main="Retirement Pension Levels", sub=paste("Note: Income based on white male age-income distribution from 1990 Census from http://time.dufe.edu.cn/mingrendt/lochner030404.pdf.
-Stock returns and inflation based on Shiller's average S&P returns and inflation since 1871: http://www.econ.yale.edu/~shiller/data.htm."), cex.sub=.6)
-mtext(paste("Initial income:" ,exp(initialIncome), ", Inflation:", inflation, ", Saving Investment Return:",investmentReturn, ", Retirement Return:", retirementInvestmentReturn ," Live Until:",T2+myage,sep=""), cex=.6) 
-for(i in 1:length(s)){
-    lines(a,z[i,],lty=i)
-    lines(a,noss[i,],lty=i,col="blue")
-}
-legend(a[1],range(z)[2],paste("Savings rate:",s),lty=1:length(s))
-dev.off()
-
-pdf('income.pdf')
-plot(t+myage,testoutput$income,type="n",xlab="Age",ylab="Price, in 2011 Dollars")
-lines(t+myage,testoutput$income, lty=1)
-prices <- exp(initialIncome)*(1+inflation)^t
-lines(t+myage,prices, lty=2)
-title("Income and Price Levels over Lifetime",sub="Note: Income based on white male age-income distribution from 1990 Census from http://time.dufe.edu.cn/mingrendt/lochner030404.pdf.
-Inflation is the historical average of 2% since 1871 from Shiller's calculations http://www.econ.yale.edu/~shiller/data.htm.", cex.sub=.55)
-legend(myage,range(testoutput$income)[2],c("Income","Price Levels"),lty=1:2)
-dev.off()
-
-#My life expectancy stuff is this:
-#Life Expectancy: 86.09
-#Lower Quartile : 78.48
-#Median Lifetime: 88.47
-#Upper Quartile : 96.51
-#This is from here:http://gosset.wharton.upenn.edu/mortality/perl/CalcForm.html
-#I wanted to use a weibull distributino and roughly match the shape of the
-#lines in this table: http://www.ssa.gov/oact/NOTES/as120/LifeTables_Body.html
-#It looks like pweibull(x,7.75,scale=92.5) looks pretty decent and more or less
-#matches my moments
+decisions <- NULL
+decisions$retirementDate <- as.Date("2053-10-22")
+decisions$savingsRate <- .08
+decisions$estate <- 500000
+decisions$T1 <- floor(as.double(decisions$retirementDate - parameters$today)/365.25) 
+decisions$returnHistory <- rep(parameters$investmentReturn,parameters$T2)
+decisions$returnHistory[parameters$t>=decisions$T1] <- parameters$retirementInvestmentReturn
+testoutput <- pension(decisions=decisions, parameters=parameters)
