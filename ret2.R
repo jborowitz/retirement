@@ -1,11 +1,11 @@
 incomegrid <- seq(0,500000,by=25000)
-longtermcapitalgainsgrid <- seq(0,5000000,by=1000000)
+longtermcapitalgainsgrid <- c(0,100,1000,10000,seq(0,5000000,by=1000000))
 dividendincomegrid <- seq(0,5000000,by=1000000)
 #incomegrid <- income
 #longtermcapitalgainsgrid <- longtermcapitalgains
 #dividendincomegrid <- dividendincome
 
-#Object definitions:
+#Object definitions: (still incomplete)
 #finances
 #- 
 #decisions
@@ -78,29 +78,56 @@ taxlookup <-
              propertyincome=0, taxablepensions=0, transferincome=0,
              rentpaid=0, realestatepaid=0, itemizeddeductions=0,
              childcareexpense=0, uiincome=0, nonAMTdeductions=0,
-             shorttermcapgains=0, ftp=FALSE, tsindex=4){
+             shorttermcapgains=0, ftp=FALSE, tsindex=4, taxtable=taxsim){
         # Currently I actually couldn't use all these arguments.  I could
         # pass them to get a taxsim file, but I'm not confident that I
         # could then lookup results based on the other values.
         # tsindex is a variable that takes integer values that represent
         # which column of the taxsim output should be used to look up
         if (ftp) {
-            print("Should get new taxsim data")
+            library('RCurl')
+            print(income)
+            print(longtermcapitalgains)
+            url<-paste('ftp://taxsim:02138@taxsimftp.nber.org/tmp/',format(Sys.time(),"%Y%m%d%H%M%S"),sep='')
+            outputurl<-paste(url,'taxsim',sep='.')
+            msgurl<-paste(url,'msg',sep='.')
+            big<-expand.grid(income, over65,longtermcapitalgains,dividendincome,dependents)
+            print(dim(big))
+            tsfile <-
+                cbind(seq(1,dim(big)[1]),year,state,married,
+                      dependents,big$Var2,big$Var1,
+                      spouseincome,big$Var4,propertyincome,
+                      taxablepensions,socialsecurityincome,transferincome,
+                      rentpaid,realestatepaid,itemizeddeductions,
+                      childcareexpense,uiincome,big$Var5,
+                      nonAMTdeductions,shorttermcapgains,big$Var3)
+            temp<- file('test.txt')
+            headline<-"9 11 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+            write(headline,temp,append=FALSE) 
+            system('cat test.txt')
+            #writeLines(headline, con=temp)
+            temptable<- file('testtable.txt')
+            write.table(tsfile, temptable, row.names=FALSE, col.names=FALSE, append=TRUE)
+            system('cat testtable.txt >> test.txt')
+            ftpUpload('test.txt',url)
+            names<-c('Case ID','Year','State','Federal income tax liability','State income tax liability','FICA (OADSI and HI, employee AND employer)','federal marginal rate on wage income','state marginal rate on wage income','FICA rate','Federal AGI','UI in AGI','Social Security in AGI','Zero Bracket Amount','Personal Exemptions','Exemption Phaseout','Deduction Phaseout','Deductions Allowed (Zero for non-itemizers)','Federal Taxable Income','Federal Regular Tax','Exemption Surtax','General Tax Credit','Child Tax Credit (as adjusted)','Additional Child Tax Credit (refundable)','Child Care Credit','Earned Income Credit','Income for the Alternative Minimum Tax','AMT Liability (addition to regular tax)','Federal Income Tax Before Credits','FICA','State Household Income','State Rent Payments','State AGI','State Exemption amount','State Standard Deduction','State Itemized Deductions','State Taxable Income','State Property Tax Credit','State Child Care Credit','State EIC','State Total Credits','State Bracket Rate')
+            taxsim <- read.table(textConnection(getURL(outputurl)))
+            names(taxsim)<-names
+            save(tsfile,taxsim,file="taxsim.RData")
         }
-        else{
-            load('taxsim.RData')
-            a <- income
-            b <- longtermcapitalgains
-            d <- dividendincome
-            tax <- indexvalue(aval=a, bval=b, dval=d, agrid=incomegrid,
-                              bgrid=longtermcapitalgainsgrid,
-                              dgrid=dividendincomegrid,
-                              func=as.matrix(taxsim[tsindex],1))
-            #this calculates the federal tax from taxsim.  The key thing is
-            #that the taxsim results have to be in matrix form.  Without
-            #that, indexing doesn't work right.
-            return(tax)
-        }
+        #load('taxsim.RData')
+        a <- income
+        b <- longtermcapitalgains
+        d <- dividendincome
+        tax <- indexvalue(aval=a, bval=b, dval=d, agrid=incomegrid,
+                          bgrid=longtermcapitalgainsgrid,
+                          dgrid=dividendincomegrid,
+                          func=as.matrix(taxtable[tsindex],1))
+        #this calculates the federal tax from taxsim.  The key thing is
+        #that the taxsim results have to be in matrix form.  Without
+        #that, indexing doesn't work right.
+        #print(cbind(a,b,d))
+        return(tax)
 }
 
 taxes <- function(income=100000, over65=0, longtermcapitalgains=0,
@@ -124,7 +151,8 @@ taxes <- function(income=100000, over65=0, longtermcapitalgains=0,
                      itemizeddeductions=itemizeddeductions,
                      childcareexpense=childcareexpense, uiincome=uiincome,
                      nonAMTdeductions=nonAMTdeductions,
-                     shorttermcapgains=shorttermcapgains, ftp=FALSE)
+                     shorttermcapgains=shorttermcapgains, ftp=FALSE,
+                     taxtable=taxsim)
     fedrate <- taxlookup(tsindex=7, income=income, over65=over65,
                      longtermcapitalgains=longtermcapitalgains,
                      dividendincome=dividendincome, dependents=dependents,
@@ -138,7 +166,8 @@ taxes <- function(income=100000, over65=0, longtermcapitalgains=0,
                      itemizeddeductions=itemizeddeductions,
                      childcareexpense=childcareexpense, uiincome=uiincome,
                      nonAMTdeductions=nonAMTdeductions,
-                     shorttermcapgains=shorttermcapgains, ftp=FALSE)
+                     shorttermcapgains=shorttermcapgains, ftp=FALSE,
+                     taxtable=taxsim)
     state <- taxlookup(tsindex=4, income=income, over65=over65,
                      longtermcapitalgains=longtermcapitalgains,
                      dividendincome=dividendincome, dependents=dependents,
@@ -152,7 +181,8 @@ taxes <- function(income=100000, over65=0, longtermcapitalgains=0,
                      itemizeddeductions=itemizeddeductions,
                      childcareexpense=childcareexpense, uiincome=uiincome,
                      nonAMTdeductions=nonAMTdeductions,
-                     shorttermcapgains=shorttermcapgains, ftp=FALSE)
+                     shorttermcapgains=shorttermcapgains, ftp=FALSE,
+                     taxtable=taxsim)
     staterate <- taxlookup(tsindex=8, income=income, over65=over65,
                      longtermcapitalgains=longtermcapitalgains,
                      dividendincome=dividendincome, dependents=dependents,
@@ -166,7 +196,8 @@ taxes <- function(income=100000, over65=0, longtermcapitalgains=0,
                      itemizeddeductions=itemizeddeductions,
                      childcareexpense=childcareexpense, uiincome=uiincome,
                      nonAMTdeductions=nonAMTdeductions,
-                     shorttermcapgains=shorttermcapgains, ftp=FALSE)
+                     shorttermcapgains=shorttermcapgains, ftp=FALSE,
+                     taxtable=taxsim)
     fica <- taxlookup(tsindex=29, income=income, over65=over65,
                      longtermcapitalgains=longtermcapitalgains,
                      dividendincome=dividendincome, dependents=dependents,
@@ -180,7 +211,8 @@ taxes <- function(income=100000, over65=0, longtermcapitalgains=0,
                      itemizeddeductions=itemizeddeductions,
                      childcareexpense=childcareexpense, uiincome=uiincome,
                      nonAMTdeductions=nonAMTdeductions,
-                     shorttermcapgains=shorttermcapgains, ftp=FALSE)
+                     shorttermcapgains=shorttermcapgains, ftp=FALSE,
+                     taxtable=taxsim)
     ficarate <- taxlookup(tsindex=9, income=income, over65=over65,
                      longtermcapitalgains=longtermcapitalgains,
                      dividendincome=dividendincome, dependents=dependents,
@@ -194,7 +226,8 @@ taxes <- function(income=100000, over65=0, longtermcapitalgains=0,
                      itemizeddeductions=itemizeddeductions,
                      childcareexpense=childcareexpense, uiincome=uiincome,
                      nonAMTdeductions=nonAMTdeductions,
-                     shorttermcapgains=shorttermcapgains, ftp=FALSE)
+                     shorttermcapgains=shorttermcapgains, ftp=FALSE,
+                     taxtable=taxsim)
     taxsimIncome <- incomegrid[vapply(X=income,FUN=inv,FUN.VALUE=0,incomegrid)]
     margrate <- ficarate + fedrate + staterate
     alltax <- state + fed + fica
@@ -236,15 +269,15 @@ earlyfactor <- function(decisions,parameters){
 funevals <- 0
 remaining <- function(retirementIncomeGuess, decisions,parameters){
     decisions$retirementIncomeGoal <- retirementIncomeGuess
-    print('called remaining with income goal:')
-    print(decisions$retirementIncomeGoal)
+    #print('called remaining with income goal:')
+    #print(decisions$retirementIncomeGoal)
     #This functino calculates how much money you would be left with if
     #you had given income levels and then spent at retirementIncomeGoal
     #real levels durign retirement
     finances <- calcFinance(decisions,parameters)
     #print(finances$savings[decisions$T2-1])
-    print('remaining value is:')
-    print(finances$savings[parameters$T2])
+    #print('remaining value is:')
+    #print(finances$savings[parameters$T2])
     return(sum((finances$savings[parameters$T2])^2))
 }
 
@@ -275,11 +308,13 @@ calcFinance <- function(decisions, parameters){
         taxes(income=finances$laborincome,longtermcapitalgains=finances$capitalgains)
     finances$netincome <- finances$laborincome - finances$taxes$tax + finances$capitalgains
     numiter <- 1
-    finances$oldrate <- rep(1,T2)
+    #finances$oldrate <- rep(1,T2)
     while(sum((finances$taxes$rate - finances$capitalgainsrate)^2)>0){
         print('function evals')
         print(funevals)
-        finances$oldrate <- finances$capitalgainsrate
+        print(finances$retirementIncome)
+        #print(cbind(finances$taxes$rate,finances$capitalgainsrate))
+        #finances$oldrate <- finances$capitalgainsrate
         finances$capitalgainsrate <- finances$taxes$rate
         X <- diag(T2) -
         rbind(rep(0,T2),cbind(diag(decisions$returnHistory[1:T2-1] *
@@ -294,7 +329,11 @@ calcFinance <- function(decisions, parameters){
         q <- decisions$savingsRate*finances$laborincome - finances$retirementConsumptionPath * finances$retirementIncome
         q[1] <- q[1]+parameters$w0
         finances$savings <- solve(X) %*% q
-        finances$capitalgains <- finances$savings * decisions$returnHistory * finances$capitalgainsrate / 100
+        print(pmax(finances$savings,0))
+        finances$capitalgains <- pmax(pmax(finances$savings,0) *
+                                      decisions$returnHistory *
+                                      finances$capitalgainsrate / 100, 0)
+        print(cbind(finances$capitalgains,finances$savings))
         finances$taxes <-
             taxes(income=finances$laborincome,longtermcapitalgains=finances$capitalgains)
         numiter <- numiter + 1
@@ -315,7 +354,6 @@ calcSS <- function(decisions, parameters, finances){
     #This function calculates social security payments given a lifetime
     #stream of earnings
     type <- parameters$ssType
-    print(type)
     t <- parameters$t
     T1 <- decisions$T1
     if (type == 'none') return(0)
@@ -419,12 +457,14 @@ pension <- function(decisions, parameters){
     #savingsRate <- sR
 
 
-    optimal <- optimize(remaining, interval=c(10000,1000000), decisions, parameters)$minimum
-    decisions$retirementIncomeGoal <- optimal
+    optimal <- optim(par=50000,remaining, gr=NULL, decisions, parameters,
+                     lower=10000,
+                     upper=1000000,control=list(factr=1e4,maxit=10, trace=3))
+    decisions$retirementIncomeGoal <- optimal$par
     print(optimal)
     finances <- calcFinance(decisions, parameters)
-    print('finished optimizing')
-    print(finances$savings)
+    #print('finished optimizing')
+    #print(finances$savings)
     return(finances)
 }
 

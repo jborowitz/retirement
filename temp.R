@@ -63,7 +63,7 @@ e <- expand.grid(agrid,bgrid,dgrid)
 func<- e$Var1 * e$Var2 * e$Var3
 N <- 1
 v <- c(6500,31,55)
-q <- t(matrix(v,dim=(N,length(v))))
+#q <- t(matrix(v,dim=(N,length(v))))
 mystuff<-indexvalue(array(seq(500,29*500+500,by=500)),array(rep(31,30)),array(rep(55,30)),agrid=agrid, bgrid=bgrid,dgrid=dgrid,func=func)
 mystuff<-indexvalue(array(seq(500,500,by=500)),array(rep(31,N)),array(rep(55,N)),agrid=agrid, bgrid=bgrid,dgrid=dgrid,func=func)
 mystuff<-indexvalue(seq(500,500,by=500),rep(31,N),rep(55,N),agrid=agrid, bgrid=bgrid,dgrid=dgrid,func=func)

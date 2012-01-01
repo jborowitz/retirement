@@ -2,17 +2,23 @@ library('RCurl')
 #q<-Sys.time()
 #q
 url<-paste('ftp://taxsim:02138@taxsimftp.nber.org/tmp/',format(Sys.time(),"%Y%m%d%H%M%S"),sep='')
+urlcap<-paste('ftp://taxsim:02138@taxsimftp.nber.org/tmp/',format(Sys.time(),"%Y%m%d%H%M%S"),'cap',sep='')
+print(urlcap)
 outputurl<-paste(url,'taxsim',sep='.')
+outputurlcap<-paste(urlcap,'taxsim',sep='.')
+print(outputurlcap)
 msgurl<-paste(url,'msg',sep='.')
 
 T1 <- 60
-headline<-"9 11 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+headlinewage<-"9 11 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
+headlinecapitalgains<-"9 70 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 "
 text<-"9 70 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
 1 1989 13 3 1 0 30000 0 0 0 0 0 0 0 0 0 2000 0 1 0 -1000 0
 1 1989 13 3 1 0 20000 0 0 0 0 0 0 0 0 0 2000 0 1 0 -1000 0"
 income <- seq(0,500000,by=25000)
 over65 <- 0
-longtermcapitalgains <- seq(0,5000000,by=1000000)
+#longtermcapitalgains <- seq(0,5000000,by=1000000)
+longtermcapitalgains <- c(0,100,1000,10000,seq(0,5000000,by=1000000))
 dividendincome <- seq(0,5000000,by=1000000)
 dependents <- 0
 #big<-expand.grid(income, over65,longtermcapitalgains,dividendincome,dependents,married,socialsecurityincome)
@@ -66,13 +72,19 @@ tsfile <-
     #cbind(caseid,year,state,married,dependents,over65,income,spouseincome,dividendincome,propertyincome,taxablepensions,socialsecurityincome,transferincome,rentpaid,realestatepaid,itemizeddeductions,childcareexpense,uiincome,minordependents,nonAMTdeductions,shorttermcapgains,longtermcapgains)
 
 temp<- file('test.txt')
-write(headline,temp,append=FALSE) 
-system('cat test.txt')
-#writeLines(headline, con=temp)
+tempcapitalgains<- file('test-capitalgains.txt')
+write(headlinewage,temp,append=FALSE) 
+write(headlinecapitalgains,tempcapitalgains,append=FALSE) 
+#system('cat test.txt')
+#writeLines(headlinewage, con=temp)
 temptable<- file('testtable.txt')
+temptablecapitalgains<- file('testtablecapitalgains.txt')
 write.table(tsfile, temptable, row.names=FALSE, col.names=FALSE, append=TRUE)
+write.table(tsfile, temptablecapitalgains, row.names=FALSE, col.names=FALSE, append=TRUE)
 system('cat testtable.txt >> test.txt')
+system('cat testtablecapitalgains.txt >> test-capitalgains.txt')
 ftpUpload('test.txt',url)
+ftpUpload('test-capitalgains.txt',urlcap)
 #The best way to do this for now (2011-10-30) is to take a table (tsfile)
 #and then write the header line and the table iwthout row or column names to
 #a file, and then upload this file.
@@ -104,14 +116,17 @@ names<-c('Case ID','Year','State','Federal income tax liability','State income t
 #a<-getURL(outputurl)
 
 taxsim <- read.table(textConnection(getURL(outputurl)))
+taxsimcapitalgains <- read.table(textConnection(getURL(outputurlcap)))
 #print(getURL(msgurl))
 names(taxsim)<-names
-print(taxsim)
+names(taxsimcapitalgains)<-names
+#print(taxsim)
 #This works to take the output file from taxsim.
-save(tsfile,taxsim,file="taxsim.RData")
+save(tsfile,taxsim,taxsimcapitalgains,file="taxsim.RData")
 # Save the output as a file.  It can be read back in with
 # 'load('taxsim.RData')'
 
+print(dim(tsfile))
 #a
 #a<-getURL(msg)
 #a
@@ -262,7 +277,8 @@ save(tsfile,taxsim,file="taxsim.RData")
 #20. Deductions not included in item 16 and not a preference for the AMT, including (on Schedule A for 2009) Deductible medical expenses in excess of 10% of AGI (only 1990+) Motor Vehicle Taxes paid (line 7 of schedule A) Home mortgage interest (line 15) Charitable contributions (line 19) Casulty or Theft Losses (line 20) 
 #21. Short Term Capital Gains or losses.  (+/-) 
 #22. Long Term Capital Gains or losses.  (+/-)
-source('temp.R')
+
+#source('temp.R')
 
 taxlookup <-
     function(income=100000, over65=0, longtermcapitalgains=0,
