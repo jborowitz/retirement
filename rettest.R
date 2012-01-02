@@ -3,10 +3,10 @@ library('RCurl')
 #q
 url<-paste('ftp://taxsim:02138@taxsimftp.nber.org/tmp/',format(Sys.time(),"%Y%m%d%H%M%S"),sep='')
 urlcap<-paste('ftp://taxsim:02138@taxsimftp.nber.org/tmp/',format(Sys.time(),"%Y%m%d%H%M%S"),'cap',sep='')
-print(urlcap)
+#print(urlcap)
 outputurl<-paste(url,'taxsim',sep='.')
 outputurlcap<-paste(urlcap,'taxsim',sep='.')
-print(outputurlcap)
+#print(outputurlcap)
 msgurl<-paste(url,'msg',sep='.')
 
 T1 <- 60
@@ -18,15 +18,17 @@ text<-"9 70 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 income <- seq(0,500000,by=25000)
 over65 <- 0
 #longtermcapitalgains <- seq(0,5000000,by=1000000)
-longtermcapitalgains <- c(0,100,1000,10000,seq(0,5000000,by=1000000))
-dividendincome <- seq(0,5000000,by=1000000)
+longtermcapitalgains <- c(0,100,1000,10000,seq(100000,5100000,by=1000000))
+dividendincome <- 0
 dependents <- 0
+socialsecurityincome <- seq(0,40000,by=8000)
 #big<-expand.grid(income, over65,longtermcapitalgains,dividendincome,dependents,married,socialsecurityincome)
-big<-expand.grid(income, over65,longtermcapitalgains,dividendincome,dependents)
+big<-expand.grid(income,
+                 over65,longtermcapitalgains,dividendincome,dependents,socialsecurityincome)
+print(names(big))
 married <- 1
-socialsecurityincome <- 0
 state <- 9
-year <- 1997
+year <- 2010
 spouseincome <- 0
 propertyincome <- 0
 taxablepensions <- 0
@@ -39,10 +41,11 @@ uiincome <- 0
 nonAMTdeductions <- 0
 shorttermcapgains <- 0
 incomegrid <- income
+socialsecuritygrid <- socialsecurityincome
 longtermcapitalgainsgrid <- longtermcapitalgains
 dividendincomegrid <- dividendincome
 tsfile <-
-    cbind(seq(1,dim(big)[1]),year,state,married,dependents,big$Var2,big$Var1,spouseincome,big$Var4,propertyincome,taxablepensions,socialsecurityincome,transferincome,rentpaid,realestatepaid,itemizeddeductions,childcareexpense,uiincome,big$Var5,nonAMTdeductions,shorttermcapgains,big$Var3)
+    cbind(seq(1,dim(big)[1]),year,state,married,dependents,big$Var2,big$Var1,spouseincome,big$Var4,propertyincome,taxablepensions,big$Var6,transferincome,rentpaid,realestatepaid,itemizeddeductions,childcareexpense,uiincome,big$Var5,nonAMTdeductions,shorttermcapgains,big$Var3)
 
 #caseid <- seq(1,T1)
 #year <- rep(2007,T1)
@@ -304,10 +307,10 @@ taxlookup <-
             #d <- big[,3]
             a <- income
             b <- longtermcapitalgains
-            d <- dividendincome
+            d <- socialsecurityincome
             tax <- indexvalue(aval=a, bval=b, dval=d, agrid=incomegrid,
                               bgrid=longtermcapitalgainsgrid,
-                              dgrid=dividendincomegrid,
+                              dgrid=socialsecuritygrid,
                               func=as.matrix(taxsim[tsindex],1))
             #this calculates the federal tax from taxsim.  The key thing is
             #that the taxsim results have to be in matrix form.  Without
