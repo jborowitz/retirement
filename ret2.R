@@ -259,10 +259,10 @@ calcFinance <- function(decisions, parameters){
         taxes(income=finances$laborincome *
               ((1+parameters$inflation)^(-t)),
               longtermcapitalgains=finances$capitalgains * ((1+parameters$inflation)^(-t)),
-              socialsecurityincome=finances$ss * ((1 + parameters$inflation)^(-t)))
+              socialsecurityincome=finances$socialsecurity * ((1 + parameters$inflation)^(-t)))
     finances$taxes$tax <- finances$taxes$tax * ((1+parameters$inflation)^(t))
     finances$netincome <- finances$laborincome - finances$taxes$tax + finances$capitalgains
-    finances$ss <- calcSS(decisions,parameters,finances)
+    finances$socialsecurity <- calcSS(decisions,parameters,finances)
     #Note that calcSS takes a PARTIALLY COMPLETED finances object - this
     #could cause problems at some point
     numiter <- 1
@@ -291,12 +291,12 @@ calcFinance <- function(decisions, parameters){
         finances$capitalgains <- finances$savings * decisions$returnHistory 
         #* finances$capitalgainsrate / 100
         #print(cbind(finances$capitalgains,finances$savings))
-        finances$ss <- calcSS(decisions,parameters,finances)
+        finances$socialsecurity <- calcSS(decisions,parameters,finances)
         finances$taxes <-
             taxes(income=finances$laborincome *
                   ((1+parameters$inflation)^(-t)),
                   longtermcapitalgains=finances$capitalgains * ((1+parameters$inflation)^(-t)),
-                  socialsecurityincome=finances$ss * ((1 + parameters$inflation)^(-t)))
+                  socialsecurityincome=finances$socialsecurity * ((1 + parameters$inflation)^(-t)))
         finances$taxes$tax <- finances$taxes$tax * ((1+parameters$inflation)^(t))
         #finances$taxes <-
             #taxes(income=finances$laborincome,longtermcapitalgains=finances$capitalgains,socialsecurityincome=finances$ss)
@@ -307,14 +307,14 @@ calcFinance <- function(decisions, parameters){
     #Note: calcSS used to be called here and it worked
     finances$consumption <- (1-decisions$savingsRate) * finances$laborincome +
         finances$retirementConsumptionPath * decisions$retirementIncomeGoal -
-        finances$taxes$tax + finances$ss
+        finances$taxes$tax + finances$socialsecurity
     
     return(finances)
 }
 
 calcSS <- function(decisions, parameters, finances){
-    #This function calculates social security payments given a lifetime
-    #stream of earnings
+    #This function calculates nominal social security payments given a lifetime
+    #stream of earnings 
     type <- parameters$ssType
     t <- parameters$t
     T1 <- decisions$T1
@@ -426,6 +426,10 @@ pension <- function(decisions, parameters){
     #print(optimal)
     finances <- calcFinance(decisions, parameters)
     finances$optimizationInfo <- optimal
+    finances$decisions <- decisions
+    finances$parameters <- parameters
+    # Don't use these decisions and parameters: these are just for using
+    # later
     #print('finished optimizing')
     #print(finances$savings)
     return(finances)
