@@ -5,7 +5,7 @@ parameters$ssInflation <- .024
 parameters$birthday <- as.Date('1984-11-18')
 parameters$today <- Sys.Date()
 parameters$myage <- floor(as.double(parameters$today-parameters$birthday)/365.25)
-parameters$now <- as.numeric(format(parameters$today,"%Y"))
+#parameters$now <- as.numeric(format(parameters$today,"%Y"))
 parameters$T2<-97-parameters$myage
 parameters$w0<-25000
 parameters$t<-seq(1,parameters$T2)
