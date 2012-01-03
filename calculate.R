@@ -10,8 +10,7 @@ parameters$T2<-97-parameters$myage
 parameters$w0<-25000
 parameters$t<-seq(1,parameters$T2)
 parameters$investmentReturn<-.04
-#investmentReturn<-.04
-#This return level is from Shiller's website:
+#investmentReturn<-.04 #This return level is from Shiller's website:
 #http://www.econ.yale.edu/~shiller/data.htm
 parameters$retirementInvestmentReturn<-.03
 parameters$inflation<-.02

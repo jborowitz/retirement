@@ -435,6 +435,7 @@ pension <- function(decisions, parameters){
     return(finances)
 }
 
+Rprof()
 decisions <- NULL
 decisions$retirementDate <- as.Date("2053-10-22")
 decisions$savingsRate <- .08
@@ -445,3 +446,6 @@ decisions$returnHistory <- rep(parameters$investmentReturn,parameters$T2)
 decisions$returnHistory[parameters$t>=decisions$T1] <- parameters$retirementInvestmentReturn
 testoutput <- pension(decisions=decisions, parameters=parameters)
 print(testoutput$retirementIncome)
+Rprof()
+summaryRprof()
+
