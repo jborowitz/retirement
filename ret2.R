@@ -304,6 +304,7 @@ calcFinance <- function(decisions, parameters){
         funevals <- funevals + 1
         #print('made it here')
     }
+    finances$netincome <- finances$laborincome - finances$taxes$tax + finances$capitalgains
     #Note: calcSS used to be called here and it worked
     finances$consumption <- (1-decisions$savingsRate) * finances$laborincome +
         finances$retirementConsumptionPath * decisions$retirementIncomeGoal -
