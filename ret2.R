@@ -447,6 +447,6 @@ decisions$returnHistory <- rep(parameters$investmentReturn,parameters$T2)
 decisions$returnHistory[parameters$t>=decisions$T1] <- parameters$retirementInvestmentReturn
 testoutput <- pension(decisions=decisions, parameters=parameters)
 print(testoutput$retirementIncome)
-Rprof()
+Rprof(NULL)
 summaryRprof()
 
