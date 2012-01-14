@@ -61,9 +61,9 @@ indexvalue <- function(aval,bval,dval,agrid, bgrid, dgrid, func ){
     # I would like to extend the function to take 3 equal length vectors
     # and one array representign f(a,b,c) and return a vector that is the
     # value of f for these vectors.
-    acall <- vapply(X=aval,FUN=inv,FUN.VALUE=0,agrid)
-    bcall <- vapply(X=bval,FUN=inv,FUN.VALUE=0,bgrid)
-    dcall <- vapply(X=dval,FUN=inv,FUN.VALUE=0,dgrid)
+    acall <- unlist(lapply(X=aval,FUN=inv,agrid))
+    bcall <- unlist(lapply(X=bval,FUN=inv,bgrid))
+    dcall <- unlist(lapply(X=dval,FUN=inv,dgrid))
     output <- array(func,dim=c(length(agrid),length(bgrid),length(dgrid)))
     #The key insight here is expand.grid(a1,a2,a3) to
     #array(.,dim=c(a1,a2,a3)) is what orders things into a 3d array
@@ -173,8 +173,8 @@ taxes <- function(income=100000, over65=0, longtermcapitalgains=0,
 
     fedcaprate <- taxlookup(taxinfo=taxinfo, tsindex=7, ftp=FALSE, taxtable=taxsimcapitalgains)
     statecaprate <- taxlookup(taxinfo=taxinfo, tsindex=8, ftp=FALSE, taxtable=taxsimcapitalgains)
-    taxsimIncome <- incomegrid[vapply(X=income,FUN=inv,FUN.VALUE=0,incomegrid)]
-    taxsimCapitalGains <- longtermcapitalgainsgrid[vapply(X=longtermcapitalgains,FUN=inv,FUN.VALUE=0,longtermcapitalgainsgrid)]
+    taxsimIncome <- incomegrid[sapply(X=income,FUN=inv,incomegrid)]
+    taxsimCapitalGains <- longtermcapitalgainsgrid[sapply(X=longtermcapitalgains,FUN=inv,longtermcapitalgainsgrid)]
     margrate <- ficarate + fedrate + staterate
     caprate <- fedcaprate + statecaprate
     alltax <- state + fed + fica
