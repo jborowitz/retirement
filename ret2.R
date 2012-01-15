@@ -30,25 +30,9 @@ socialsecuritygrid <- seq(0,40000,by=8000)
 inv <- function(value,vec){
     #This code takes value and returns the index of the largest element of
     #vec (a sorted vector) that value is greater than.  It can be called
-    #with vapply as in indexvalue
-    if (value > max(vec)){
-        return(length(vec))
-    }
-    if (value <= min(vec)){
-        return(1)
-    }
-    low <- sum(vec<value)
-    high <- low+1
-    lowv <- vec[low]
-    highv <- vec[high]
-    lowdiff <- abs(lowv-value)
-    highdiff <- abs(highv-value)
-    if (lowdiff < highdiff){
-        return(low)
-    }
-    else{
-        return(high)
-    }
+    #with vapply as in indexvalue.  If the function 'vec' is not monotonic,
+    #there could be significant issues
+    return(approx(vec,seq(1,length(vec)),xout=value,method="constant",rule=2)$y)
 }
 
 indexvalue <- function(aval,bval,dval,agrid, bgrid, dgrid, func ){
@@ -61,9 +45,9 @@ indexvalue <- function(aval,bval,dval,agrid, bgrid, dgrid, func ){
     # I would like to extend the function to take 3 equal length vectors
     # and one array representign f(a,b,c) and return a vector that is the
     # value of f for these vectors.
-    acall <- unlist(lapply(X=aval,FUN=inv,agrid))
-    bcall <- unlist(lapply(X=bval,FUN=inv,bgrid))
-    dcall <- unlist(lapply(X=dval,FUN=inv,dgrid))
+    acall <- inv(aval,agrid)
+    bcall <- inv(bval,bgrid)
+    dcall <- inv(dval,dgrid)
     output <- array(func,dim=c(length(agrid),length(bgrid),length(dgrid)))
     #The key insight here is expand.grid(a1,a2,a3) to
     #array(.,dim=c(a1,a2,a3)) is what orders things into a 3d array
@@ -421,8 +405,8 @@ pension <- function(decisions, parameters){
 
 
     optimal <- optim(par=50000,remaining, gr=NULL, decisions, parameters,
-                     lower=10000,
-                     upper=1000000,control=list(factr=1e4,maxit=10, trace=3))
+                     lower=10000, upper=1000000, method = "L-BFGS-B",
+                     control=list(factr=1e4,maxit=10, trace=1))
     decisions$retirementIncomeGoal <- optimal$par
     #print(optimal)
     finances <- calcFinance(decisions, parameters)
@@ -449,4 +433,3 @@ testoutput <- pension(decisions=decisions, parameters=parameters)
 print(testoutput$retirementIncome)
 Rprof(NULL)
 summaryRprof()
-
