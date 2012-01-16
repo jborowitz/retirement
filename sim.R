@@ -1,4 +1,4 @@
-rm(list=ls())
+#rm(list=ls())
 y0 <- .75
 pi0 <- .0625
 pi1 <- .001985
@@ -33,4 +33,10 @@ legend(1,range(y,mu,nu)[2],c("y","mu","nu"),lty=1:3)
 print(cov(cbind(xi,w)))
 print(y[1])
 
-#print(c(y0,delta,mu))
+#Note; it's a little ambiguous from their paper whether Gottschalk and
+#Moffit actually calibrate and report delta and w as age group changes or
+#age changes, so whether you get a new one when you go from your 30s to your
+#40s, or whether you get a new one every year.  Playing with the parameters,
+#if you go with the decade interpretation, so you would have to scale delta
+#and w down by .1, then you get really almost entirely transitory earnings
+#differences.
