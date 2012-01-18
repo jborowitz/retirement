@@ -1,8 +1,9 @@
 load('taxsim.RData')
+load('Model.RData')
 #Define parameters
 parameters <- NULL
 parameters$ssInflation <- .024
-parameters$birthday <- as.Date('1984-11-18')
+parameters$birthday <- as.Date('1982-11-18')
 parameters$today <- Sys.Date()
 parameters$myage <- floor(as.double(parameters$today-parameters$birthday)/365.25)
 #parameters$now <- as.numeric(format(parameters$today,"%Y"))
@@ -15,7 +16,9 @@ parameters$investmentReturn<-.04
 parameters$retirementInvestmentReturn<-.03
 parameters$inflation<-.02
 #initialIncome=log(50000)
-parameters$initialIncome=log(90000)
+parameters$initialIncome=100000
+parameters$randomizeIncome <- FALSE
+parameters$seed <- 101
 #This should be a logarithmic initial income
 a <- read.csv('wages.csv',head=TRUE,sep="\t")
 #These are historical wage levels for the last 59 years for SS
@@ -27,6 +30,10 @@ res <- line(a$Year,log(a$Index))
 #p[1:length(a$Index)] <- a$Index
 #scale <- p/p[1]
 parameters$avgwage <- 40711.61 
+parameters$race <- "White"
+parameters$hispanic <- "Non-Hispanic"
+parameters$educ <- 20
+
 kmax <- 16500
 imax <- 5000
 kseries <- 500*round(kmax/500*(1+parameters$inflation)^parameters$t)

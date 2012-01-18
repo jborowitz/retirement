@@ -227,9 +227,7 @@ calcFinance <- function(decisions, parameters){
     inflation <- parameters$inflation
     initialIncome <- parameters$initialIncome
     finances <- NULL
-    finances$laborincome <- laborincome(initialIncome=initialIncome,
-                                        inflation=inflation, T1=T1,t=t)
-
+    finances$laborincome <- parameters$potentialLaborIncome * (t < T1)
     finances$currentSavings <- finances$laborincome * decisions$savingsRate
     finances$toIRA <- pmin(finances$currentSavings,parameters$IRAlimit)
     #finances$taxableincome <- finances$laborincome - finances$toIRA
@@ -239,7 +237,7 @@ calcFinance <- function(decisions, parameters){
     finances$retirementIncome <- decisions$retirementIncomeGoal
     finances$capitalgains <- rep(0,T2)
     finances$capitalgainsrate <- rep(0,T2)
-    finances$taxes <-
+    finances$taxes <- #Deflate income variables to current dollar values, then reinflate
         taxes(income=finances$laborincome *
               ((1+parameters$inflation)^(-t)),
               longtermcapitalgains=finances$capitalgains * ((1+parameters$inflation)^(-t)),
@@ -348,12 +346,86 @@ calcSS <- function(decisions, parameters, finances){
 }
 
 laborincome <- function(initialIncome=50000,inflation = .02, T1= 40, t =
-                        seq(1,70)){
+                        seq(1,70), type="Heckman", decisions,
+                        parameters){
 
-    return((exp(initialIncome + .1301*t - .0023*t^2)*(1+inflation)^t) * (t < T1))
-    #income comes from Heckman's 50 years of Mincer regressions:
-    ##http://time.dufe.edu.cn/mingrendt/lochner030404.pdf, table 2 for white Men in 1990
+    if (type == "Heckman"){
+        return((exp(initialIncome + .1301*t - .0023*t^2)*(1+inflation)^t) * (t < T1))
+        #income comes from Heckman's 50 years of Mincer regressions:
+        ##http://time.dufe.edu.cn/mingrendt/lochner030404.pdf, table 2 for white Men in 1990
+    }
+    else{
+        me <- data.frame(race=factor(1,label=parameters$race),
+                                    hispanic=factor(1,label=parameters$hispanic),
+                                    educ=parameters$educ, a_age=parameters$myage+t-1)
+        me$age2 <- me$a_age^2
+        me$age3 <- me$a_age^3
+        me$age4 <- me$a_age^4
+        me$age5 <- me$a_age^5
+        me$age6 <- me$a_age^6
+        predictedlogincome <- predict(fullearnings,me)
+        print(initialIncome)
+        myresid <- log(initialIncome)-predictedlogincome[1]
+        print(myresid)
+        if (parameters$randomizeIncome == TRUE){
+            y <- simulate.income(myresid,parameters)
+            income <- exp(predictedlogincome + y)
+        }
+        else{
+            income <- exp(myresid + predictedlogincome)
+        }
+
+        income[me$a_age > 85] <- income[85-parameters$myage]
+        return((income*(1+inflation)^t))
+
+    }
 }
+
+simulate.income <- function(y0,parameters){
+    set.seed(parameters$seed)
+    pi0 <- .0625
+    pi1 <- .001985
+    sig.w <- .00269
+    sig.delta <- .0000383
+    sig.mu0 <- .0901
+    sig.mu.delta <- -.00019033
+    rho <- .8468
+    theta <- -.574
+    a0 <- 20
+    age <- parameters$myage
+    T2 <- parameters$T2-1
+
+
+    delta <- rnorm(1,mean=y0 * sig.mu.delta / sig.mu0,sd=sqrt(sig.delta - sig.mu.delta/sig.mu0))
+    delta <- 0
+    #print(delta)
+    w0 <- y0 - delta
+    b<-pi0+pi1*(seq(age,T2 + age -1)-a0)/10
+    xi <- rnorm(T2,sd=sqrt(pi0+pi1*(seq(age,T2 + age -1)-a0)/10))
+    w <- append(w0,rnorm(T2-1,sd=sqrt(sig.w)))
+    L <- rbind(rep(0,T2),cbind(diag(T2-1),rep(0,T2-1)))
+    #L <- cbind(rep(0,T2),rbind(diag(T2-1),rep(0,T2-1)))
+    mu <- solve(diag(T2)-L) %*% (delta + w)
+    nu <- solve(diag(T2) - rho* L) %*% (diag(T2) - theta * L) %*% xi
+    y = append(y0,mu + nu)
+    #plot(y,ylim=range(y,mu,nu),type="n")
+    #lines(y,lty=1)
+    #lines(mu,lty=2)
+    #lines(nu,lty=3)
+    ##points(xi,pch=1)
+    ##points(w,pch=2)
+    #legend(1,range(y,mu,nu)[2],c("y","mu","nu"),lty=1:3)
+    return(y)
+
+    #Note; it's a little ambiguous from their paper whether Gottschalk and
+    #Moffit actually calibrate and report delta and w as age group changes or
+    #age changes, so whether you get a new one when you go from your 30s to your
+    #40s, or whether you get a new one every year.  Playing with the parameters,
+    #if you go with the decade interpretation, so you would have to scale delta
+    #and w down by .1, then you get really almost entirely transitory earnings
+    #differences.
+}
+
 pension <- function(decisions, parameters){
     #This function calculates the final yearly permanent income, in real
     #terms, if a person saves at a given rate and gets ss under a given
@@ -386,11 +458,12 @@ pension <- function(decisions, parameters){
     T1 <- decisions$T1
     t <- parameters$t
    # calculate T1 based on retirement date
-    potentialIncome <-  laborincome(initialIncome=parameters$initialIncome,
-                                    inflation=parameters$inflation,
-                                    T1=parameters$T2,t=t)
-    income <- potentialIncome
-    income[t>T1] <- 0
+    parameters$potentialLaborIncome <- laborincome(initialIncome=parameters$initialIncome,
+                                        inflation=parameters$inflation, T1=T1,t=t,
+                                        parameters=parameters,decisions=decisions,
+                                        type="Moffit-Gottschalk")
+    #income <- parameters$potentialIncome
+    #income[t>T1] <- 0
 
     #finances <- data.frame(t)
     #returnHistory <- rep(parameters$investmentReturn,parametersT2)
