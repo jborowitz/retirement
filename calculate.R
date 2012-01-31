@@ -3,7 +3,7 @@ load('Model.RData')
 #Define parameters
 parameters <- NULL
 parameters$ssInflation <- .024
-parameters$birthday <- as.Date('1982-11-18')
+parameters$birthday <- as.Date('1984-11-18')
 parameters$today <- Sys.Date()
 parameters$myage <- floor(as.double(parameters$today-parameters$birthday)/365.25)
 #parameters$now <- as.numeric(format(parameters$today,"%Y"))
@@ -54,7 +54,7 @@ parameters$ssType <- 'current'
 
 
 #Run and calculate things
-s <- seq(.02,.26,by=.08)
+s <- seq(.05,.32,by=.09)
 retirementage <- seq(Sys.Date()+29*365.25 ,Sys.Date()+49*365.25, by=5*365.25)
 
 z <- matrix(0,nrow=length(s),ncol=length(retirementage),dimnames=c(list(s),list(retirementage)))
@@ -84,6 +84,8 @@ for(i in 1:length(s)){
         #in current dollars, for retirement at age j and saving at rate s
     }
 }
+print(dim(z))
+print(dim(noss))
 birthday <- parameters$birthday
 inflation <- parameters$inflation
 t <- parameters$t
@@ -92,6 +94,7 @@ myage <- parameters$myage
 pdf('Pensions.pdf')
 a <- floor(as.double(retirementage-parameters$birthday)/365.25)
 plot(a,z[length(s),],type="n",ylim=range(z,noss),xlab="Retirement Age",ylab="Retirement Pension Level, in 2011 $")
+print('made it here')
 title(main="Retirement Pension Levels", sub=paste("Note: Income based on white male age-income distribution from 1990 Census from http://time.dufe.edu.cn/mingrendt/lochner030404.pdf.
 Stock returns and inflation based on Shiller's average S&P returns and inflation since 1871: http://www.econ.yale.edu/~shiller/data.htm."), cex.sub=.6)
 mtext(paste("Initial income:" ,exp(parameters$initialIncome), ",
@@ -108,6 +111,7 @@ dev.off()
 
 pdf('income.pdf')
 plot(t+myage,testoutput$laborincome,type="n",xlab="Age",ylab="Price, in 2011 Dollars")
+plot(a,z[length(s),],type="n",ylim=range(z,noss),xlab="Retirement Age",ylab="Retirement Pension Level, in 2011 $")
 lines(t[t<testoutput$decisions$T1]+myage,testoutput$laborincome[t<testoutput$decisions$T1], lty=1)
 prices <- exp(parameters$initialIncome)*(1+inflation)^t
 lines(t+myage,prices, lty=2)
@@ -118,6 +122,7 @@ Inflation is the historical average of 2% since 1871 from Shiller's calculations
 legend(myage,range(testoutput$laborincome)[2],c("Income","Price Levels","Social Security","Consumption"),lty=1:4)
 dev.off()
 
+system('echo "" | mutt -s "Stuff" -a income.pdf -a Pensions.pdf jborowitz@gmail.com')
 #My life expectancy stuff is this:
 #Life Expectancy: 86.09
 #Lower Quartile : 78.48
