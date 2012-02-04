@@ -16,9 +16,9 @@ text<-"9 70 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 1 1989 13 3 1 0 30000 0 0 0 0 0 0 0 0 0 2000 0 1 0 -1000 0
 1 1989 13 3 1 0 20000 0 0 0 0 0 0 0 0 0 2000 0 1 0 -1000 0"
 income <- seq(0,500000,by=25000)
-longtermcapitalgains <- c(0,100,1000,10000,seq(100000,5100000,by=1000000))
-longtermcapitalgains <- seq(100,400100,by=25000)
+longtermcapitalgains <- seq(0,400000,by=25000)
 socialsecurityincome <- seq(0,40000,by=8000)
+#longtermcapitalgains <- c(0,100,1000,10000,seq(100000,5100000,by=1000000))
 over65 <- 0
 #longtermcapitalgains <- seq(0,5000000,by=1000000)
 dividendincome <- 0
