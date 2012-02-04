@@ -1,6 +1,6 @@
 load('taxsim.RData')
 load('Model.RData')
-source('ret2.R')
+source('finances.R')
 #Define parameters
 parameters <- NULL
 parameters$ssInflation <- .024
@@ -48,9 +48,6 @@ parameters$IRAlimit <- iseries
 
 #http://www.ssa.gov/oact/COLA/piaformula.html
 parameters$initwage <- 9779.44
-#parameters$bp1 <- round(180 * avgwage/initwage)
-#parameters$bp2 <- round(1085 *avgwage/initwage)
-
 
 parameters$ssType <- 'current'
 Rprof()

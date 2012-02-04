@@ -1,5 +1,6 @@
 load('taxsim.RData')
 load('Model.RData')
+source('finances.R')
 #Define parameters
 parameters <- NULL
 parameters$ssInflation <- .024
