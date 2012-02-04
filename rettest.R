@@ -2,7 +2,7 @@ library('RCurl')
 #q<-Sys.time()
 #q
 url<-paste('ftp://taxsim:02138@taxsimftp.nber.org/tmp/',format(Sys.time(),"%Y%m%d%H%M%S"),sep='')
-urlcap<-paste('ftp://taxsim:2139@taxsimftp.nber.org/tmp/',format(Sys.time(),"%Y%m%d%H%M%S"),'cap',sep='')
+urlcap<-paste('ftp://taxsim:02138@taxsimftp.nber.org/tmp/',format(Sys.time(),"%Y%m%d%H%M%S"),'cap',sep='')
 #print(urlcap)
 outputurl<-paste(url,'taxsim',sep='.')
 outputurlcap<-paste(urlcap,'taxsim',sep='.')
@@ -26,7 +26,6 @@ dependents <- 0
 #big<-expand.grid(income, over65,longtermcapitalgains,dividendincome,dependents,married,socialsecurityincome)
 big<-expand.grid(income,
                  over65,longtermcapitalgains,dividendincome,dependents,socialsecurityincome)
-print(names(big))
 married <- 1
 state <- 9
 year <- 2010
