@@ -80,7 +80,7 @@ for(i in 1:length(s)){
         #print(c(result$savings$socialSecurity[result$savings$socialSecurity>0][1]*(1+inflation)^(-ssStartTime),result$consumption))
         z[i,j] <- result$retirementIncome
         # + result$savings$socialSecurity[result$savings$socialSecurity>0][1]*(1+inflation)^(-ssStartTime)
-        noss[i,j] <- result$retirementIncome - result$socialsecurity[decisions$T1]
+        noss[i,j] <- result$retirementIncome - result$socialsecurity[decisions$T1]*(1+parameters$inflation)^(-1*decisions$T1)
         #z and noss are matrices of final permanent incomes at retirement,
         #in current dollars, for retirement at age j and saving at rate s
     }
