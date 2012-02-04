@@ -2,7 +2,7 @@ library('RCurl')
 #q<-Sys.time()
 #q
 url<-paste('ftp://taxsim:02138@taxsimftp.nber.org/tmp/',format(Sys.time(),"%Y%m%d%H%M%S"),sep='')
-urlcap<-paste('ftp://taxsim:02138@taxsimftp.nber.org/tmp/',format(Sys.time(),"%Y%m%d%H%M%S"),'cap',sep='')
+urlcap<-paste('ftp://taxsim:2139@taxsimftp.nber.org/tmp/',format(Sys.time(),"%Y%m%d%H%M%S"),'cap',sep='')
 #print(urlcap)
 outputurl<-paste(url,'taxsim',sep='.')
 outputurlcap<-paste(urlcap,'taxsim',sep='.')
@@ -16,12 +16,13 @@ text<-"9 70 2 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
 1 1989 13 3 1 0 30000 0 0 0 0 0 0 0 0 0 2000 0 1 0 -1000 0
 1 1989 13 3 1 0 20000 0 0 0 0 0 0 0 0 0 2000 0 1 0 -1000 0"
 income <- seq(0,500000,by=25000)
+longtermcapitalgains <- c(0,100,1000,10000,seq(100000,5100000,by=1000000))
+longtermcapitalgains <- seq(100,400100,by=25000)
+socialsecurityincome <- seq(0,40000,by=8000)
 over65 <- 0
 #longtermcapitalgains <- seq(0,5000000,by=1000000)
-longtermcapitalgains <- c(0,100,1000,10000,seq(100000,5100000,by=1000000))
 dividendincome <- 0
 dependents <- 0
-socialsecurityincome <- seq(0,40000,by=8000)
 #big<-expand.grid(income, over65,longtermcapitalgains,dividendincome,dependents,married,socialsecurityincome)
 big<-expand.grid(income,
                  over65,longtermcapitalgains,dividendincome,dependents,socialsecurityincome)
