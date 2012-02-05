@@ -36,6 +36,8 @@ inv <- function(value,vec){
     #with vapply as in indexvalue.  If the function 'vec' is not monotonic,
     #there could be significant issues
     a<-floor(value/(vec[2]-vec[1])) + 1
+    a[a < 1] <- 1
+    a[a > length(vec)] <- length(vec)
     return(a)
     #print(a)
     #print(vec[a])
@@ -59,6 +61,13 @@ indexvalue <- function(aval,bval,dval,agrid, bgrid, dgrid, func ){
     acall <- floor(aval/(agrid[2]-agrid[1]))+1
     bcall <- floor(bval/(bgrid[2]-bgrid[1]))+1
     dcall <- floor(dval/(dgrid[2]-dgrid[1]))+1
+    acall[acall < 1] <- 1
+    acall[acall > length(agrid)] <- length(agrid)
+    bcall[bcall < 1] <- 1
+    bcall[bcall > length(bgrid)] <- length(bgrid)
+    dcall[dcall < 1] <- 1
+    dcall[dcall > length(dgrid)] <- length(dgrid)
+    #print(cbind(acall,aval,bcall,bval,dcall,dval))
     output <- array(func,dim=c(length(agrid),length(bgrid),length(dgrid)))
     #The key insight here is expand.grid(a1,a2,a3) to
     #array(.,dim=c(a1,a2,a3)) is what orders things into a 3d array
@@ -164,16 +173,18 @@ taxes <- function(income=100000, over65=0, longtermcapitalgains=0,
     #print(length(taxinfo$income))
     #print(length(taxinfo$income))
 
+    #print(taxinfo)
     #print(head(taxsim))
     fed <- taxlookup(taxinfo=taxinfo, tsindex=5, ftp=FALSE, taxtable=taxsim)
     fedrate <- taxlookup(taxinfo=taxinfo, tsindex=7, ftp=FALSE, taxtable=taxsim)
-    #print(fedrate)
+    #print(length(fedrate))
     state <- taxlookup(taxinfo=taxinfo, tsindex=4, ftp=FALSE, taxtable=taxsim)
     staterate <- taxlookup(taxinfo=taxinfo, tsindex=8, ftp=FALSE, taxtable=taxsim)
     fica <- taxlookup(taxinfo=taxinfo, tsindex=29, ftp=FALSE, taxtable=taxsim)
     ficarate <- taxlookup(taxinfo=taxinfo, tsindex=9, ftp=FALSE, taxtable=taxsim)
 
     fedcaprate <- taxlookup(taxinfo=taxinfo, tsindex=7, ftp=FALSE, taxtable=taxsimcapitalgains)
+    #print(fedcaprate)
     statecaprate <- taxlookup(taxinfo=taxinfo, tsindex=8, ftp=FALSE, taxtable=taxsimcapitalgains)
     fedagi <- taxlookup(taxinfo=taxinfo, tsindex=10, ftp=FALSE, taxtable=taxsim)
     taxsimIncome <- incomegrid[inv(income,incomegrid)]
@@ -288,19 +299,19 @@ calcFinance <- function(decisions, parameters){
         #print(finances$retirementIncome)
         #print(cbind(finances$taxes$rate,finances$capitalgainsrate))
         #finances$oldrate <- finances$capitalgainsrate
-        print(length(finances$returnHistory))
-        print(length(finances$capitalgainsrate))
+        #print(length(finances$returnHistory))
+        #print(length(finances$capitalgainsrate))
         finances$capitalgainsrate <- finances$taxes$caprate
         X <- diag(T2) -
         rbind(rep(0,T2),cbind(diag(finances$returnHistory[2:T2-1] *
                                    (1-finances$capitalgainsrate[1:T2-1]/100)
                                    + 1),rep(0,T2-1)))
         #print(X)
-        print(finances$returnHistory[2:T2-1])
-        print(finances$capitalgainsrate[1:T2-1])
-        print(finances$returnHistory[2:T2-1] - finances$capitalgainsrate[1:T2-1])
-        print(dim(X))
-        print('made X')
+        #print(finances$returnHistory[2:T2-1])
+        #print(finances$capitalgainsrate[1:T2-1])
+        #print(finances$returnHistory[2:T2-1] - finances$capitalgainsrate[1:T2-1])
+        #print(dim(X))
+        #print('made X')
         #rbind(rep(0,T2),cbind(diag(returnHistory[1:T2-1] * (1) + 1),rep(0,T2-1)))
         #Here I attempt to assume that all capital gains are realized as
         #accrued (which is totally weird since there's currently no
@@ -312,14 +323,26 @@ calcFinance <- function(decisions, parameters){
         #head(X)
         #print(X)
         finances$savings <- solve(X) %*% q
-        print(length(finances$savings))
-        print(length(decisions$retirementConsumptionPath))
+        #print('solved!')
+        #print(length(finances$savings))
+        #print(length(decisions$retirementConsumptionPath))
         #print(pmax(finances$savings,0))
         finances$capitalgains <- finances$savings * finances$returnHistory 
-        print('im here')
+        #print('im here')
         #* finances$capitalgainsrate / 100
         #print(cbind(finances$capitalgains,finances$savings))
         finances$socialsecurity <- calcSS(decisions,parameters,finances)
+        #finances$taxes <- #Deflate income variables to current dollar values, then reinflate
+            #taxes(income=finances$laborincome *
+                  #((1+parameters$inflation)^(-t)),
+                  #longtermcapitalgains=finances$capitalgains * ((1+parameters$inflation)^(-t)),
+                  #socialsecurityincome=finances$socialsecurity * ((1 + parameters$inflation)^(-t)))
+        #print(length(finances$socialsecurity))
+        #print(length(finances$laborincome))
+        #print(length(finances$capitalgains))
+        #print(finances$socialsecurity)
+        #print(finances$laborincome)
+        #print(finances$capitalgains)
         finances$taxes <-
             taxes(income=finances$laborincome *
                   ((1+parameters$inflation)^(-t)),

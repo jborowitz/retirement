@@ -117,10 +117,10 @@ s <- seq(.05,.32,by=.09)
         #z and noss are matrices of final permanent incomes at retirement,
         #in current dollars, for retirement at age j and saving at rate s
 }
-#timed1<-system.time(mclapply(as.list(quicks),calcit,decisions,parameters,mc.cores=1))
-timed<-system.time(lapply(as.list(quicks),calcit,decisions,parameters))
+timed1<-system.time(mclapply(as.list(quicks),calcit,decisions,parameters,mc.cores=16))
+#timed<-system.time(lapply(as.list(quicks),calcit,decisions,parameters))
 print(timed1)
-print(timed)
+#print(timed)
 #Rprof(NULL)
 #print(dim(z))
 print(dim(noss))
