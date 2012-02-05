@@ -1,10 +1,13 @@
 ######################################################################
 ##These need to be uncommented to really run but are commented for testing
 ##purposes - i'd like to run this on the internet but have no access
+#incomegrid <- seq(0,500000,by=25000)
+#longtermcapitalgainsgrid <- c(0,100,1000,10000,seq(100000,5100001,by=1000000))
+##dividendincomegrid <- seq(0,5000000,by=1000000)
+#socialsecuritygrid <- seq(0,40000,by=8000)
 incomegrid <- seq(0,500000,by=25000)
-longtermcapitalgainsgrid <- c(0,100,1000,10000,seq(100000,5100000,by=1000000))
-#dividendincomegrid <- seq(0,5000000,by=1000000)
-socialsecuritygrid <- seq(0,40000,by=8000)
+longtermcapitalgainsgrid <- seq(0,400000,by=25000)
+socialsecurityincomegrid <- seq(0,40000,by=8000)
 ######################################################################
 
 #Object definitions: (still incomplete)
@@ -32,6 +35,11 @@ inv <- function(value,vec){
     #vec (a sorted vector) that value is greater than.  It can be called
     #with vapply as in indexvalue.  If the function 'vec' is not monotonic,
     #there could be significant issues
+    a<-floor(value/(vec[2]-vec[1])) + 1
+    return(a)
+    #print(a)
+    #print(vec[a])
+    return(vec[a])
     return(approx(vec,seq(1,length(vec)),xout=value,method="constant",rule=2)$y)
 }
 
@@ -45,9 +53,12 @@ indexvalue <- function(aval,bval,dval,agrid, bgrid, dgrid, func ){
     # I would like to extend the function to take 3 equal length vectors
     # and one array representign f(a,b,c) and return a vector that is the
     # value of f for these vectors.
-    acall <- inv(aval,agrid)
-    bcall <- inv(bval,bgrid)
-    dcall <- inv(dval,dgrid)
+    #acall <- inv(aval,agrid)
+    #bcall <- inv(bval,bgrid)
+    #dcall <- inv(dval,dgrid)
+    acall <- floor(aval/(agrid[2]-agrid[1]))+1
+    bcall <- floor(bval/(bgrid[2]-bgrid[1]))+1
+    dcall <- floor(dval/(dgrid[2]-dgrid[1]))+1
     output <- array(func,dim=c(length(agrid),length(bgrid),length(dgrid)))
     #The key insight here is expand.grid(a1,a2,a3) to
     #array(.,dim=c(a1,a2,a3)) is what orders things into a 3d array
@@ -108,6 +119,8 @@ taxlookup <-
         a <- taxinfo$income
         b <- taxinfo$longtermcapitalgains
         d <- taxinfo$socialsecurityincome
+        #print(length(d))
+        #print(d)
         tax <- indexvalue(aval=a, bval=b, dval=d, agrid=incomegrid,
                           bgrid=longtermcapitalgainsgrid,
                           dgrid=socialsecuritygrid,
@@ -147,9 +160,14 @@ taxes <- function(income=100000, over65=0, longtermcapitalgains=0,
     taxinfo$uiincome <- uiincome
     taxinfo$nonAMTdeductions <- nonAMTdeductions
     taxinfo$shorttermcapgains <- shorttermcapgains
+    #print(socialsecurityincome)
+    #print(length(taxinfo$income))
+    #print(length(taxinfo$income))
 
+    #print(head(taxsim))
     fed <- taxlookup(taxinfo=taxinfo, tsindex=5, ftp=FALSE, taxtable=taxsim)
     fedrate <- taxlookup(taxinfo=taxinfo, tsindex=7, ftp=FALSE, taxtable=taxsim)
+    #print(fedrate)
     state <- taxlookup(taxinfo=taxinfo, tsindex=4, ftp=FALSE, taxtable=taxsim)
     staterate <- taxlookup(taxinfo=taxinfo, tsindex=8, ftp=FALSE, taxtable=taxsim)
     fica <- taxlookup(taxinfo=taxinfo, tsindex=29, ftp=FALSE, taxtable=taxsim)
@@ -157,12 +175,18 @@ taxes <- function(income=100000, over65=0, longtermcapitalgains=0,
 
     fedcaprate <- taxlookup(taxinfo=taxinfo, tsindex=7, ftp=FALSE, taxtable=taxsimcapitalgains)
     statecaprate <- taxlookup(taxinfo=taxinfo, tsindex=8, ftp=FALSE, taxtable=taxsimcapitalgains)
-    taxsimIncome <- incomegrid[sapply(X=income,FUN=inv,incomegrid)]
-    taxsimCapitalGains <- longtermcapitalgainsgrid[sapply(X=longtermcapitalgains,FUN=inv,longtermcapitalgainsgrid)]
+    fedagi <- taxlookup(taxinfo=taxinfo, tsindex=10, ftp=FALSE, taxtable=taxsim)
+    taxsimIncome <- incomegrid[inv(income,incomegrid)]
+    taxsimCapitalGains <- longtermcapitalgainsgrid[inv(longtermcapitalgains,longtermcapitalgainsgrid)]
+    #taxsimSocialSecurity <- socialsecurityincomegrid[inv(socialsecurityincome,socialsecurityincomegrid)]
+    #taxsimIncome <- incomegrid[sapply(X=income,FUN=inv,incomegrid)]
+    #taxsimCapitalGains <- longtermcapitalgainsgrid[sapply(X=longtermcapitalgains,FUN=inv,longtermcapitalgainsgrid)]
     margrate <- ficarate + fedrate + staterate
     caprate <- fedcaprate + statecaprate
     alltax <- state + fed + fica
     tax <- alltax + (income - taxsimIncome) * margrate / 100 + (longtermcapitalgains - taxsimCapitalGains) * caprate / 100 
+    #print(cbind(income,tax,margrate,caprate,alltax,fedagi,socialsecurityincome))
+    #print(socialsecurityincome)
     #print('capital gains level and rate')
     #print(cbind(income, longtermcapitalgains, fedcaprate, margrate,
                 #statecaprate,alltax,taxsimIncome,taxsimCapitalGains))
@@ -221,6 +245,8 @@ calcFinance <- function(decisions, parameters){
     #a given level of retirement consumption.  It also calculates taxes.
     #It returns a 'finances' structure with many elements set.  There is no
     #check to make sure this returns  'feasible' finances.
+    #print(finances)
+    #print(parameters$savingsRate)
     t <- parameters$t
     T1 <- decisions$T1
     T2 <- parameters$T2
@@ -229,6 +255,8 @@ calcFinance <- function(decisions, parameters){
     finances <- NULL
     finances$laborincome <- parameters$potentialLaborIncome * (t < T1)
     finances$currentSavings <- finances$laborincome * decisions$savingsRate
+    #print(parameters$IRAlimit)
+    #print(parameters$currentSavings)
     finances$toIRA <- pmin(finances$currentSavings,parameters$IRAlimit)
     #finances$taxableincome <- finances$laborincome - finances$toIRA
     #finances$deductions <- finances$toIRA 
@@ -237,17 +265,22 @@ calcFinance <- function(decisions, parameters){
     finances$retirementIncome <- decisions$retirementIncomeGoal
     finances$capitalgains <- rep(0,T2)
     finances$capitalgainsrate <- rep(0,T2)
-    finances$taxes <- #Deflate income variables to current dollar values, then reinflate
-        taxes(income=finances$laborincome *
-              ((1+parameters$inflation)^(-t)),
-              longtermcapitalgains=finances$capitalgains * ((1+parameters$inflation)^(-t)),
-              socialsecurityincome=finances$socialsecurity * ((1 + parameters$inflation)^(-t)))
+    #print(finances$socialsecurity)
+    #print(finances$taxes)
+    #print(length(finances$taxes$caprate))
+    #print(length(finances$taxes$rate))
+    #print(length(finances$taxes$tax))
     finances$taxes$tax <- finances$taxes$tax * ((1+parameters$inflation)^(t))
     finances$netincome <- finances$laborincome - finances$taxes$tax + finances$capitalgains
     finances$socialsecurity <- calcSS(decisions,parameters,finances)
     #Note that calcSS takes a PARTIALLY COMPLETED finances object - this
     #could cause problems at some point
-    numiter <- 1
+    finances$taxes <- #Deflate income variables to current dollar values, then reinflate
+        taxes(income=finances$laborincome *
+              ((1+parameters$inflation)^(-t)),
+              longtermcapitalgains=finances$capitalgains * ((1+parameters$inflation)^(-t)),
+              socialsecurityincome=finances$socialsecurity * ((1 + parameters$inflation)^(-t)))
+    numiter <- 2
     #finances$oldrate <- rep(1,T2)
     while(sum((finances$taxes$caprate - finances$capitalgainsrate)^2)>0){
         #print('function evals')
@@ -255,11 +288,19 @@ calcFinance <- function(decisions, parameters){
         #print(finances$retirementIncome)
         #print(cbind(finances$taxes$rate,finances$capitalgainsrate))
         #finances$oldrate <- finances$capitalgainsrate
+        print(length(finances$returnHistory))
+        print(length(finances$capitalgainsrate))
         finances$capitalgainsrate <- finances$taxes$caprate
         X <- diag(T2) -
-        rbind(rep(0,T2),cbind(diag(decisions$returnHistory[1:T2-1] *
+        rbind(rep(0,T2),cbind(diag(finances$returnHistory[2:T2-1] *
                                    (1-finances$capitalgainsrate[1:T2-1]/100)
                                    + 1),rep(0,T2-1)))
+        #print(X)
+        print(finances$returnHistory[2:T2-1])
+        print(finances$capitalgainsrate[1:T2-1])
+        print(finances$returnHistory[2:T2-1] - finances$capitalgainsrate[1:T2-1])
+        print(dim(X))
+        print('made X')
         #rbind(rep(0,T2),cbind(diag(returnHistory[1:T2-1] * (1) + 1),rep(0,T2-1)))
         #Here I attempt to assume that all capital gains are realized as
         #accrued (which is totally weird since there's currently no
@@ -268,9 +309,14 @@ calcFinance <- function(decisions, parameters){
 
         q <- decisions$savingsRate*finances$laborincome - finances$retirementConsumptionPath * finances$retirementIncome
         q[1] <- q[1]+parameters$w0
+        #head(X)
+        #print(X)
         finances$savings <- solve(X) %*% q
+        print(length(finances$savings))
+        print(length(decisions$retirementConsumptionPath))
         #print(pmax(finances$savings,0))
-        finances$capitalgains <- finances$savings * decisions$returnHistory 
+        finances$capitalgains <- finances$savings * finances$returnHistory 
+        print('im here')
         #* finances$capitalgainsrate / 100
         #print(cbind(finances$capitalgains,finances$savings))
         finances$socialsecurity <- calcSS(decisions,parameters,finances)
@@ -364,9 +410,7 @@ laborincome <- function(initialIncome=50000,inflation = .02, T1= 40, t =
         me$age5 <- me$a_age^5
         me$age6 <- me$a_age^6
         predictedlogincome <- predict(fullearnings,me)
-        print(initialIncome)
         myresid <- log(initialIncome)-predictedlogincome[1]
-        print(myresid)
         if (parameters$randomizeIncome == TRUE){
             y <- simulate.income(myresid,parameters)
             income <- exp(predictedlogincome + y)
@@ -398,7 +442,6 @@ simulate.income <- function(y0,parameters){
 
     delta <- rnorm(1,mean=y0 * sig.mu.delta / sig.mu0,sd=sqrt(sig.delta - sig.mu.delta/sig.mu0))
     delta <- 0
-    #print(delta)
     w0 <- y0 - delta
     b<-pi0+pi1*(seq(age,T2 + age -1)-a0)/10
     xi <- rnorm(T2,sd=sqrt(pi0+pi1*(seq(age,T2 + age -1)-a0)/10))
@@ -481,15 +524,12 @@ pension <- function(decisions, parameters){
                      lower=10000, upper=1000000, method = "L-BFGS-B",
                      control=list(factr=1e4,maxit=10, trace=1))
     decisions$retirementIncomeGoal <- optimal$par
-    #print(optimal)
     finances <- calcFinance(decisions, parameters)
     finances$optimizationInfo <- optimal
     finances$decisions <- decisions
     finances$parameters <- parameters
     # Don't use these decisions and parameters: these are just for using
     # later
-    #print('finished optimizing')
-    #print(finances$savings)
     return(finances)
 }
 

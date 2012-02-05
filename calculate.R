@@ -1,6 +1,7 @@
 load('taxsim.RData')
 load('Model.RData')
 source('finances.R')
+library('parallel')
 #Define parameters
 parameters <- NULL
 parameters$ssInflation <- .024
@@ -62,30 +63,66 @@ z <- matrix(0,nrow=length(s),ncol=length(retirementage),dimnames=c(list(s),list(
 noss <- matrix(0,nrow=length(s),ncol=length(retirementage),dimnames=c(list(s),list(retirementage)))
 today <- Sys.Date()
 allresults <- NULL
-for(i in 1:length(s)){
-    for(j in 1:length(retirementage)){
+quicks <- apply(expand.grid(s,length(retirementage)),1,list)
+#for(i in 1:length(s)){
+    #for(j in 1:length(retirementage)){
+        #decisions <- NULL
+        #decisions$retirementDate <- retirementage[j]
+        #decisions$savingsRate <- s[i]
+        #decisions$estate <- 10000
+        #decisions$T1 <- floor(as.double(decisions$retirementDate - parameters$today)/365.25) 
+        #decisions$returnHistory <- rep(parameters$investmentReturn,parameters$T2)
+        #decisions$returnHistory[parameters$t>=decisions$T1] <- parameters$retirementInvestmentReturn
+        #result <- pension(decisions=decisions, parameters=parameters)
+        #allresults <- append(allresults,result)
+        #print(result$retirementIncome)
+        #print(result$socialsecurity[decisions$T1])
+        ##result <- pension(retirementage[j],s[i],'current')
+        ##ssStartTime <- floor(as.double(retirementage[j]-today)/365.25)
+        ##print(c(result$savings$socialSecurity[result$savings$socialSecurity>0][1]*(1+inflation)^(-ssStartTime),result$consumption))
+        #z[i,j] <- result$retirementIncome
+        ## + result$savings$socialSecurity[result$savings$socialSecurity>0][1]*(1+inflation)^(-ssStartTime)
+        #noss[i,j] <- result$retirementIncome - result$socialsecurity[decisions$T1]*(1+parameters$inflation)^(-1*decisions$T1)
+        ##z and noss are matrices of final permanent incomes at retirement,
+        ##in current dollars, for retirement at age j and saving at rate s
+    #}
+#}
+calcit <- function(p,decisions, parameters){
+    p <- unlist(p)
+retirementage <- seq(Sys.Date()+29*365.25 ,Sys.Date()+49*365.25, by=5*365.25)
+s <- seq(.05,.32,by=.09)
+        i <- p[1]
+        j <- p[2]
+        #print(i)
+        #print(j)
         decisions <- NULL
         decisions$retirementDate <- retirementage[j]
-        decisions$savingsRate <- s[i]
+        #print(decisions$retirementDate)
+        decisions$savingsRate <- i
         decisions$estate <- 10000
         decisions$T1 <- floor(as.double(decisions$retirementDate - parameters$today)/365.25) 
-        decisions$returnHistory <- rep(parameters$investmentReturn,parameters$T2)
-        decisions$returnHistory[parameters$t>=decisions$T1] <- parameters$retirementInvestmentReturn
+        parameters$returnHistory <- rep(parameters$investmentReturn,parameters$T2)
+        parameters$returnHistory[parameters$t>=decisions$T2] <- parameters$retirementInvestmentReturn
         result <- pension(decisions=decisions, parameters=parameters)
-        allresults <- append(allresults,result)
-        print(result$retirementIncome)
-        print(result$socialsecurity[decisions$T1])
+        return(result)
+        #allresults <- append(allresults,result)
+        #print(result$retirementIncome)
+        #print(result$socialsecurity[decisions$T1])
         #result <- pension(retirementage[j],s[i],'current')
         #ssStartTime <- floor(as.double(retirementage[j]-today)/365.25)
         #print(c(result$savings$socialSecurity[result$savings$socialSecurity>0][1]*(1+inflation)^(-ssStartTime),result$consumption))
-        z[i,j] <- result$retirementIncome
+        #z[i,j] <- result$retirementIncome
         # + result$savings$socialSecurity[result$savings$socialSecurity>0][1]*(1+inflation)^(-ssStartTime)
-        noss[i,j] <- result$retirementIncome - result$socialsecurity[decisions$T1]*(1+parameters$inflation)^(-1*decisions$T1)
+        #noss[i,j] <- result$retirementIncome - result$socialsecurity[decisions$T1]*(1+parameters$inflation)^(-1*decisions$T1)
         #z and noss are matrices of final permanent incomes at retirement,
         #in current dollars, for retirement at age j and saving at rate s
-    }
 }
-print(dim(z))
+#timed1<-system.time(mclapply(as.list(quicks),calcit,decisions,parameters,mc.cores=1))
+timed<-system.time(lapply(as.list(quicks),calcit,decisions,parameters))
+print(timed1)
+print(timed)
+#Rprof(NULL)
+#print(dim(z))
 print(dim(noss))
 birthday <- parameters$birthday
 inflation <- parameters$inflation
