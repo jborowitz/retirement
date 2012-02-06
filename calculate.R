@@ -63,7 +63,7 @@ z <- matrix(0,nrow=length(s),ncol=length(retirementage),dimnames=c(list(s),list(
 noss <- matrix(0,nrow=length(s),ncol=length(retirementage),dimnames=c(list(s),list(retirementage)))
 today <- Sys.Date()
 allresults <- NULL
-quicks <- apply(expand.grid(s,length(retirementage)),1,list)
+quicks <- apply(expand.grid(s,1:length(retirementage)),1,list)
 #for(i in 1:length(s)){
     #for(j in 1:length(retirementage)){
         #decisions <- NULL
@@ -117,7 +117,18 @@ s <- seq(.05,.32,by=.09)
         #z and noss are matrices of final permanent incomes at retirement,
         #in current dollars, for retirement at age j and saving at rate s
 }
-timed1<-system.time(mclapply(as.list(quicks),calcit,decisions,parameters,mc.cores=16))
+timed1<-system.time(results<-mclapply(as.list(quicks),calcit,decisions,parameters,mc.cores=16))
+#timed<-system.time(results<-lapply(as.list(quicks),calcit,decisions,parameters))
+mat<-array(results,c(length(s),length(retirementage)))
+for(i in 1:length(s)){
+    for(j in 1:length(retirementage)){
+        result <- mat[i,j][[1]]
+        #print(result$retirementIncome)
+        z[i,j] <- result$retirementIncome + result$socialsecurity[result$decisions$T1]*(1+result$parameters$inflation)^(-result$decisions$T1)
+        noss[i,j] <- result$retirementIncome
+        print(c(noss[i,j],z[i,j]))
+    }
+}
 #timed<-system.time(lapply(as.list(quicks),calcit,decisions,parameters))
 print(timed1)
 #print(timed)
@@ -148,16 +159,16 @@ legend(a[1],range(z)[2],paste("Savings rate:",s),lty=1:length(s))
 dev.off()
 
 pdf('income.pdf')
-plot(t+myage,testoutput$laborincome,type="n",xlab="Age",ylab="Price, in 2011 Dollars")
+plot(t+myage,result$laborincome,type="n",xlab="Age",ylab="Price, in 2011 Dollars")
 plot(a,z[length(s),],type="n",ylim=range(z,noss),xlab="Retirement Age",ylab="Retirement Pension Level, in 2011 $")
-lines(t[t<testoutput$decisions$T1]+myage,testoutput$laborincome[t<testoutput$decisions$T1], lty=1)
+lines(t[t<result$decisions$T1]+myage,result$laborincome[t<result$decisions$T1], lty=1)
 prices <- exp(parameters$initialIncome)*(1+inflation)^t
 lines(t+myage,prices, lty=2)
-lines(t[t>=testoutput$decisions$T1]+myage,testoutput$socialsecurity[t>=testoutput$decisions$T1], lty=3)
-lines(t+myage,testoutput$consumption, lty=4)
+lines(t[t>=result$decisions$T1]+myage,result$socialsecurity[t>=result$decisions$T1], lty=3)
+lines(t+myage,result$consumption, lty=4)
 title("Income and Price Levels over Lifetime",sub="Note: Income based on white male age-income distribution from 1990 Census from http://time.dufe.edu.cn/mingrendt/lochner030404.pdf.  
 Inflation is the historical average of 2% since 1871 from Shiller's calculations http://www.econ.yale.edu/~shiller/data.htm.", cex.sub=.55)
-legend(myage,range(testoutput$laborincome)[2],c("Income","Price Levels","Social Security","Consumption"),lty=1:4)
+legend(myage,range(result$laborincome)[2],c("Income","Price Levels","Social Security","Consumption"),lty=1:4)
 dev.off()
 
 system('echo "" | mutt -s "Stuff" -a income.pdf -a Pensions.pdf jborowitz@gmail.com')

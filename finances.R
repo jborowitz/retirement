@@ -7,7 +7,7 @@
 #socialsecuritygrid <- seq(0,40000,by=8000)
 incomegrid <- seq(0,500000,by=25000)
 longtermcapitalgainsgrid <- seq(0,400000,by=25000)
-socialsecurityincomegrid <- seq(0,40000,by=8000)
+socialsecuritygrid <- seq(0,40000,by=8000)
 ######################################################################
 
 #Object definitions: (still incomplete)
@@ -189,7 +189,7 @@ taxes <- function(income=100000, over65=0, longtermcapitalgains=0,
     fedagi <- taxlookup(taxinfo=taxinfo, tsindex=10, ftp=FALSE, taxtable=taxsim)
     taxsimIncome <- incomegrid[inv(income,incomegrid)]
     taxsimCapitalGains <- longtermcapitalgainsgrid[inv(longtermcapitalgains,longtermcapitalgainsgrid)]
-    #taxsimSocialSecurity <- socialsecurityincomegrid[inv(socialsecurityincome,socialsecurityincomegrid)]
+    #taxsimSocialSecurity <- socialsecuritygrid[inv(socialsecurityincome,socialsecuritygrid)]
     #taxsimIncome <- incomegrid[sapply(X=income,FUN=inv,incomegrid)]
     #taxsimCapitalGains <- longtermcapitalgainsgrid[sapply(X=longtermcapitalgains,FUN=inv,longtermcapitalgainsgrid)]
     margrate <- ficarate + fedrate + staterate
